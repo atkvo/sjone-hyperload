@@ -312,6 +312,65 @@ def flash(sPort, binArray, blockContent,
     return blockCount
 
 
+def prematureExit(serialport, message):
+    logging.error("{}. Exiting...".format(message))
+    serialport.baudrate = sInitialDeviceBaud
+    serialport.close()
+    sys.exit(2)
+
+
+def getHandshakeStatus(sp, handshakeBytes):
+    """
+    handshakeBytes expects the handshake
+     protocol bytes in alternating order
+
+    read, write, read, write, read (must end on a read)
+    """
+    # reset SJOne board
+    sp.rts = False
+    sp.dtr = False
+
+    # read from SJOne for bootloader signal
+    msg = sp.read(1)
+
+    if msg is handshakeBytes[0]:
+        # SJOne bootloader is active, begin handshake
+        # skip the first handshake since it's done now
+        for i in xrange(1, len(handshakeBytes) - 1):
+
+            # send and read next handshake protocol
+            sp.write(handshakeBytes[i])
+            msg = sp.read(1)
+
+            if msg is handshakeBytes[i + 1]:
+                print 'Handshake {} received'.format(i)
+            else:
+                print 'Handshake {} timed out'.format(i)
+                return False
+        return True
+    else:
+        return False
+
+
+def setBoardBaud(sp, baud, cpuSpeed):
+    lControlWordInteger = getControlWord(baud, cpuSpeed)
+    lControlWordPacked = struct.pack('<i', lControlWordInteger)
+
+    bytesWritten = sp.write(lControlWordPacked)
+
+    if bytesWritten == len(lControlWordPacked):
+        msg = sp.read(1)
+        if msg != lControlWordPacked[0]:
+            print "Error: Failed to receive control word ACK"
+            return False
+        else:
+            print "Success: board set to {} baud.".format(baud)
+            return True
+    else:
+        print 'Error: control word not sent successfully'
+        return False
+
+
 # Main Program ###
 def main():
     global sDeviceFile
@@ -342,18 +401,6 @@ def main():
     print "Hex File Path = \"" + sHexFilePath + "\""
     print str('-' * (len(sHexFilePath) + 20))
 
-    # # Fetching Hex File and Storing
-    # hexFile = IntelHex(sHexFilePath)
-
-    # if sGenerateBinary == "y":
-    #     # Create a Binary File of this Hex File
-    #     sBinFilePath = string.replace(sHexFilePath, ".hex", ".bin")
-    #     logging.debug("Binary File Path : %s", sBinFilePath)
-    #     hexFile.tofile(sBinFilePath, format='bin')
-
-    # # Obtain the actual Binary content from the Hex File
-    # binArray = hexFile.tobinarray()
-
     sPort = serial.Serial(port=sDeviceFile,
                           baudrate=sInitialDeviceBaud,
                           parity=serial.PARITY_NONE,
@@ -364,133 +411,101 @@ def main():
     sPort.reset_output_buffer()
     sPort.flush()
 
-    # Setting Initial State of RTS Bit to False
-    sPort.rts = False
+    if getHandshakeStatus(sPort, ByteReference) is True:
 
-    # Reseting the board by toggling DTR
-    sPort.dtr = False
+        if setBoardBaud(sPort, sDeviceBaud, sCPUSpeed) is True:
+        # From here on out will be to flash the board
+            if sDeviceBaud != sInitialDeviceBaud:
+                # Switch to new BaudRate here.
+                logging.debug("Requested Baudrate different from Default. \
+                               Changing Baudrate..")
 
-    # Reading a Byte from SJOne
-    msg = sPort.read(1)
+                sPort.baudrate = sDeviceBaud
 
-    if msg is ByteReference[0]:
-
-        sPort.write(ByteReference[1])
-
-        logging.debug("Initial Handshake Initiated! - Received ")
-
-        msg = sPort.read(1)
-
-        if msg is ByteReference[2]:
-            logging.debug(
-                "Received {}, Sending Control Word..".format(repr(msg)))
-
-            lControlWordInteger = getControlWord(sDeviceBaud, sCPUSpeed)
-            lControlWordPacked = struct.pack('<i', lControlWordInteger)
-
-            msg = sPort.write(bytearray(lControlWordPacked))
-
-            if msg != 4:
-                logging.error("Error - Sending control word failed")
             else:
-                logging.debug("Sending Control Word Successful!")
+                logging.debug("BaudRate same as Default")
 
-                msg = sPort.read(1)
+            # Read the CPU Desc String
+            msg = sPort.read(1)
 
-                if msg != lControlWordPacked[0]:
-                    logging.error("Error - Failed to receive Control Word Ack")
-                else:
-                    logging.debug("Ack from SJOne received!")
+            if msg != SpecialChar['Dollar']:
+                logging.error("Failed to read CPU Description String")
+            else:
+                logging.debug("Reading CPU Desc String..")
 
-                    if sDeviceBaud != sInitialDeviceBaud:
-                        # Switch to new BaudRate here.
-                        logging.debug("Requested Baudrate different from Default. \
-                                       Changing Baudrate..")
-
-                        sPort.baudrate = sDeviceBaud
-
-                    else:
-                        logging.debug("BaudRate same as Default")
-
-                    # Read the CPU Desc String
+                CPUDescString = SpecialChar['Dollar']
+                while True:
                     msg = sPort.read(1)
 
-                    if msg != SpecialChar['Dollar']:
-                        logging.error("Failed to read CPU Description String")
-                    else:
-                        logging.debug("Reading CPU Desc String..")
+                    if msg == SpecialChar['NextLine']:
+                        break
 
-                        CPUDescString = SpecialChar['Dollar']
-                        while True:
-                            msg = sPort.read(1)
+                    CPUDescString = CPUDescString + msg
 
-                            if msg == SpecialChar['NextLine']:
-                                break
+                # should have CPU string by now
+                logging.debug(
+                    "CPU Description String = %s", CPUDescString)
 
-                            CPUDescString = CPUDescString + msg
+                boardParameters = getBoardParameters(CPUDescString)
 
-                        logging.debug(
-                            "CPU Description String = %s", CPUDescString)
+                # Receive OK from SJOne
+                msg = sPort.read(1)
 
-                        boardParameters = getBoardParameters(CPUDescString)
+                if msg != SpecialChar['OK']:
+                    logging.error("Error - Failed to Receive OK")
+                else:
+                    logging.debug("OK Received! Sending Block")
 
-                        # Receive OK from SJOne
-                        msg = sPort.read(1)
+                binArray = getBinaryFromIHex(sHexFilePath, sGenerateBinary)
+                blockSize = int(boardParameters['BlockSize'])
+                totalBlocks = (len(binArray) * 1.0) / blockSize
+                totalBlocks = math.ceil(totalBlocks)
+                binArray = padBinaryArray(binArray, blockSize)
 
-                        if msg != SpecialChar['OK']:
-                            logging.error("Error - Failed to Receive OK")
-                        else:
-                            logging.debug("OK Received! Sending Block")
+                logging.debug("Total Blocks = %f", totalBlocks)
+                print "Total # of Blocks to be Flashed = ", totalBlocks
 
-                        binArray = getBinaryFromIHex(sHexFilePath, sGenerateBinary)
-                        blockSize = int(boardParameters['BlockSize'])
-                        totalBlocks = (len(binArray) * 1.0) / blockSize
-                        totalBlocks = math.ceil(totalBlocks)
-                        binArray = padBinaryArray(binArray, blockSize)
+                blockContent = bytearray(blockSize)
 
-                        logging.debug("Total Blocks = %f", totalBlocks)
-                        print "Total # of Blocks to be Flashed = ", totalBlocks
+                # Send Dummy Blocks -
+                # Update : We can send the actual blocks itself.
+                sendDummy = False
+                if sendDummy is True:
+                    logging.debug("FLASHING EMPTY BLOCKS")
 
-                        blockContent = bytearray(blockSize)
+                # Sending Blocks of Binary File
+                blockCount = flash(sPort,
+                                   binArray,
+                                   blockContent,
+                                   blockSize,
+                                   totalBlocks,
+                                   sendDummy)
+            if blockCount != totalBlocks:
+                logging.error("Error - All Blocks not Flashed")
+                logging.error("Total = {}".format(totalBlocks))
+                logging.error("# of Blocks Flashed = {}"
+                              .format(blockCount))
+            else:
+                print "Flashing Successful!"
+                endTxPacked = bytearray(2)
+                endTxPacked[0] = 0xFF
+                endTxPacked[1] = 0xFF
 
-                        # Send Dummy Blocks -
-                        # Update : We can send the actual blocks itself.
-                        sendDummy = False
-                        if sendDummy is True:
-                            logging.debug("FLASHING EMPTY BLOCKS")
+                msg = sPort.write(bytearray(endTxPacked))
 
-                        # Sending Blocks of Binary File
-                        blockCount = flash(sPort,
-                                           binArray,
-                                           blockContent,
-                                           blockSize,
-                                           totalBlocks,
-                                           sendDummy)
-                    if blockCount != totalBlocks:
-                        logging.error("Error - All Blocks not Flashed")
-                        logging.error("Total = {}".format(totalBlocks))
-                        logging.error("# of Blocks Flashed = {}"
-                                      .format(blockCount))
-                    else:
-                        print "Flashing Successful!"
-                        endTxPacked = bytearray(2)
-                        endTxPacked[0] = 0xFF
-                        endTxPacked[1] = 0xFF
+                if msg != 2:
+                    logging.error("Error Sending \
+                        End Of Transaction Signal")
 
-                        msg = sPort.write(bytearray(endTxPacked))
+                msg = sPort.read(1)
+                logging.debug("Received Ack = " + str(msg))
 
-                        if msg != 2:
-                            logging.error("Error Sending \
-                                End Of Transaction Signal")
+                if msg != SpecialChar['STAR']:
+                    logging.error("Error - Final Ack Not Received")
 
-                        msg = sPort.read(1)
-                        logging.debug("Received Ack = " + str(msg))
-
-                        if msg != SpecialChar['STAR']:
-                            logging.error("Error - Final Ack Not Received")
-
-    else:
-        logging.error("Timed Out!")
+# REDUCING THIS
+    # else:
+    #     logging.error("Timed Out!")
 
     sPort.baudrate = sInitialDeviceBaud
 
