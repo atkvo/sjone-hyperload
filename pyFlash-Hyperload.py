@@ -1,18 +1,15 @@
 #!/usr/bin/env python
+"""
 # SJSU - AV #
 
-########
 # CHANGELOG:
 # 2017-02-11 : Added command line settings change support
 # 2016-02-15 : Working Skeleton for Flashing a Hex file to SJOne comeplete!
-#
+"""
 
 import serial
 import string
-import os
-import time
 import struct
-import binascii
 import math
 import serial.serialutil
 import logging
@@ -21,7 +18,7 @@ import getopt
 from intelhex import IntelHex
 
 ###############################################################################
-################# CONFIGURATION FOR pyFlash - Hyperload ######################
+# CONFIGURATION FOR pyFlash - Hyperload #######################################
 ###############################################################################
 sDeviceFile = "/dev/tty.usbserial-A503JOHW"   # Device File Path
 sDeviceBaud = 1000000          # Suitable Device Baud Rate
@@ -29,7 +26,7 @@ sHexFilePath = "/Users/atkvo/Workspace/eclipse/test/Debug/test.hex"
 sGenerateBinary = "y"  # "y" - Yes | "n" - No
 ###############################################################################
 
-#### LOGGING OPTIONS ####
+# LOGGING OPTIONS #######
 PYFLASH_DEBUG_LOG = "no"  # "yes" - Debug Version. "no" - Release Version
 #########################
 
@@ -112,27 +109,27 @@ def printBytes(mymsg):
 
 
 def getBoardParameters(descString):
-    boardParametersDict = {'Board': '',
-                           'BlockSize': '',
-                           'BootloaderSize': '',
-                           'FlashSize': ''}
+    boardParameters = {'Board': '',
+                       'BlockSize': '',
+                       'BootloaderSize': '',
+                       'FlashSize': ''}
 
     # Parsing String to obtain required Board Parameters
     boardParametersList = descString.split(':')
 
-    boardParametersDict['Board'] = boardParametersList[0]
-    boardParametersDict['BlockSize'] = boardParametersList[1]
-    boardParametersDict['BootloaderSize'] = (int(boardParametersList[2]) * 2)
-    boardParametersDict['FlashSize'] = boardParametersList[3]
+    boardParameters['Board'] = boardParametersList[0]
+    boardParameters['BlockSize'] = boardParametersList[1]
+    boardParameters['BootloaderSize'] = (int(boardParametersList[2]) * 2)
+    boardParameters['FlashSize'] = boardParametersList[3]
 
     print "\n***** Board Information ********"
-    print "Board              = " + (str)(boardParametersDict['Board'])
-    print "Block (Chunk) Size = " + (str)(boardParametersDict['BlockSize']) + " bytes"
-    print "Bootloader Size    = " + (str)(boardParametersDict['BootloaderSize']) + " bytes"
-    print "Flash Size         = " + (str)(boardParametersDict['FlashSize']) + " KBytes"
+    print "Board           = {}".format(boardParameters['Board'])
+    print "Block Size      = {} B".format(boardParameters['BlockSize'])
+    print "Bootloader Size = {} B".format(boardParameters['BootloaderSize'])
+    print "Flash Size      = {} KB".format(boardParameters['FlashSize'])
     print "*********************************\n"
 
-    return boardParametersDict
+    return boardParameters
 
 
 def printContent(lContent):
@@ -280,7 +277,8 @@ def flash(sPort, binArray, blockContent,
 
         msg = sPort.read(1)
         if msg != SpecialChar['OK']:
-            logging.error("Failed to Receive Ack.. Retrying #" + str(blockCount))
+            logging.error(
+                "Failed to Receive Ack.. Retrying #{}".format(blockCount))
         else:
             print "Block # " + str(blockCount) + " flashed!"
             blockCount = blockCount + 1
@@ -359,7 +357,8 @@ def main():
         msg = sPort.read(1)
 
         if msg is ByteReference[2]:
-            logging.debug("Received " + (str)(repr(msg)) + ", Sending Control Word..")
+            logging.debug(
+                "Received {}, Sending Control Word..".format(repr(msg)))
 
             lControlWordInteger = getControlWord(sDeviceBaud, sCPUSpeed)
             lControlWordPacked = struct.pack('<i', lControlWordInteger)
@@ -380,7 +379,8 @@ def main():
 
                     if sDeviceBaud != sInitialDeviceBaud:
                         # Switch to new BaudRate here.
-                        logging.debug("Requested Baudrate different from Default. Changing Baudrate..")
+                        logging.debug("Requested Baudrate different from Default. \
+                                       Changing Baudrate..")
 
                         sPort.baudrate = sDeviceBaud
 
@@ -404,7 +404,8 @@ def main():
 
                             CPUDescString = CPUDescString + msg
 
-                        logging.debug("CPU Description String = %s", CPUDescString)
+                        logging.debug(
+                            "CPU Description String = %s", CPUDescString)
 
                         boardParameters = getBoardParameters(CPUDescString)
 
@@ -419,12 +420,14 @@ def main():
                         # Send Dummy Blocks -
                         # Update : We can send the actual blocks itself.
 
-
                         # Sending Blocks of Binary File
-                        totalBlocks = (len(binArray) * 1.0 / int(boardParameters['BlockSize']))
+                        totalBlocks = (len(binArray) * 1.0
+                                       / int(boardParameters['BlockSize']))
                         logging.debug("Total Blocks = %f", totalBlocks)
 
-                        paddingCount = len(binArray) - ((len(binArray)) % int(boardParameters['BlockSize']))
+                        paddingCount = (len(binArray)
+                                        - ((len(binArray))
+                                           % int(boardParameters['BlockSize'])))
                         logging.debug("Total Padding Count = %d", paddingCount)
 
                         totalBlocks = math.ceil(totalBlocks)
@@ -451,8 +454,9 @@ def main():
                                            sendDummy)
                     if blockCount != totalBlocks:
                         logging.error("Error - All Blocks not Flashed")
-                        logging.error("Total = " + str(totalBlocks))
-                        logging.error("# of Blocks Flashed = " + str(blockCount))
+                        logging.error("Total = {}".format(totalBlocks))
+                        logging.error("# of Blocks Flashed = {}"
+                                      .format(blockCount))
                     else:
                         print "Flashing Successful!"
                         endTxPacked = bytearray(2)
@@ -462,7 +466,8 @@ def main():
                         msg = sPort.write(bytearray(endTxPacked))
 
                         if msg != 2:
-                            logging.error("Error in Sending End Of Transaction Signal")
+                            logging.error("Error Sending \
+                                End Of Transaction Signal")
 
                         msg = sPort.read(1)
                         logging.debug("Received Ack = " + str(msg))
