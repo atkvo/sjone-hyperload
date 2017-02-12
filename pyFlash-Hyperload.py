@@ -22,9 +22,9 @@ from intelhex import IntelHex
 ###############################################################################
 ################# CONFIGURATION FOR pyFlash - Hyperload ######################
 ###############################################################################
-sDeviceFile = "/dev/tty.usbserial-A503JOHW-D"   # Device File Path
+sDeviceFile = "/dev/tty.usbserial-A503JOHW"   # Device File Path
 sDeviceBaud = 1000000          # Suitable Device Baud Rate
-sHexFilePath = "/Users/atkvo/Workspace/eclipse/test/Debug/test.hex-D"
+sHexFilePath = "/Users/atkvo/Workspace/eclipse/test/Debug/test.hex"
 sGenerateBinary = "y"  # "y" - Yes | "n" - No
 ###############################################################################
 
@@ -235,17 +235,23 @@ def getCommandlineArgs():
 
 # Main Program ###
 def main():
+    global sDeviceFile
+    global sHexFilePath
+    global sDeviceBaud
+    global sGenerateBinary
     printIntroMessage()
-    if sys.argv > 1:
+    if len(sys.argv) > 1:
         try:
             p, f = getCommandlineArgs()
             sDeviceFile = p
             sHexFilePath = f
         except ValueError:
             print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
+            sys.exit(2)
     else:
         # use default settings
         print 'no command line switches detected: using default settings'
+        pass
 
     print str('-' * (len(sHexFilePath) + 20))
     print "Hex File Path = \"" + sHexFilePath + "\""
