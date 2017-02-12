@@ -4,6 +4,8 @@ Version : 1.1
 ## About the Tool:
 A firmware flashing tool for SJOne using Python. This is based on the 'Hyperload' Protocol for flashing images at high speeds.
 
+The original source is here: https://gitlab.com/akshay-vijaykumar/pyFlash-Hyperload
+
 ## Required Packages
 
 * python2   [v]
@@ -34,9 +36,8 @@ Example:
 ## Development
 
 ### Notes
-
 * Make sure to not mix `spaces` with `tab` tabbing on the editor. Stick with 4 spaces for consistency.
-
+* [Hyperload Protocol](http://www.socialledge.com/sjsu/index.php?title=Hyperload_Protocol)
 ### TODO
 
 - [x] Display platform information
@@ -46,6 +47,7 @@ Example:
 - [ ] Ensure packing is done based on Endianness
 - [ ] Rewrite program with classes using this as the backbone
 - [ ] Incorporate design decisions keeping GUI in mind
+- [ ] Add code comments
 
 ### Issues Faced
 1. Handling Bytes were hard - Use bytearray for most of the IO related functions. Difference between bytes and bytearray is that the latter is mutable. 
@@ -58,6 +60,8 @@ Example:
 * Added command line settings change support
 * Converted all tabs to spaces and remove line endings
 * Moved main code into a main function 
+* Split off many portions of the main function into smaller functions in preparation for TODO list
+* Organized main function into Phase 1, Phase 2, and Phase 3
 * Forked repo from https://gitlab.com/akshay-vijaykumar/pyFlash-Hyperload
 
 ### v1.0 - 2016-02-15
