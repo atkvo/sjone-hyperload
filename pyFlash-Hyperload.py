@@ -13,7 +13,7 @@ import time
 import struct
 import binascii
 import math
-import serial.serialutil 
+import serial.serialutil
 import logging
 import sys
 import getopt
@@ -42,7 +42,7 @@ if PYFLASH_BUILD_LEVEL == "DEBUG":
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 else:
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    
+
 
 # Things to Do:
 # 1. Display Platform Information                               [DONE]
@@ -67,7 +67,7 @@ ControlWordList = b'\x80\xf8\xfe\xff'
 SpecialChar = {'Dollar' : '$', 'OK' : '!', 'NextLine' : '\n', 'STAR' : '*'}
 sCPUSpeed = 48000000
 sInitialDeviceBaud = 38400
-    
+
 ByteReference = b'\xff\x55\xaa'
 
 # Common Util Functions
@@ -79,11 +79,11 @@ def printIntroMessage():
     print "Version    : ", ApplicationVersion
     print "Build Type : ", PYFLASH_BUILD_LEVEL
     print "#######################"
-    
+
     return
 
 
-def printBytes(mymsg): 
+def printBytes(mymsg):
 
     print "Type info = " + (str)(type(mymsg))
 
@@ -98,9 +98,9 @@ def printBytes(mymsg):
     	printBytes(bytearray(mymsg))
 
     elif type(mymsg) == int:
-        
+
         print "0x" + '{:x}'.format(mymsg),
-        
+
     else:
         print mymsg
 
@@ -149,13 +149,13 @@ def printContent(lContent):
 def getControlWord(baudRate, cpuSpeed):
     # TODO : Currently using known values. Replace with actual formula
     logging.debug("Retrieving Control Word")
-   
+
     controlWord = ((cpuSpeed / (baudRate * 16)) - 1)
 
     return controlWord
 
 def getPageContent(bArray, blkCount, pageSize):
-	
+
     startOffset = blkCount * pageSize
     endOffset = (startOffset + pageSize - 1)
 
@@ -182,8 +182,8 @@ def getChecksum(blocks):
 
     return lChecksum[0]
 
-# Class 
-    
+# Class
+
 ### Main Program ###
 
 printIntroMessage()
@@ -241,7 +241,7 @@ if sGenerateBinary == "y":
 binArray = hexFile.tobinarray()
 
 sPort = serial.Serial(
-            port = sDeviceFile, 
+            port = sDeviceFile,
             baudrate = sInitialDeviceBaud,
             parity = serial.PARITY_NONE,
             stopbits = serial.STOPBITS_ONE,
@@ -254,23 +254,23 @@ sPort.flush()
 # Setting Initial State of RTS Bit to False
 sPort.rts = False;
 
-# Reseting the board by toggling DTR 
-sPort.dtr = False; 
+# Reseting the board by toggling DTR
+sPort.dtr = False;
 
 # Reading a Byte from SJOne
-msg = sPort.read(1) 
+msg = sPort.read(1)
 
 if msg is ByteReference[0]:
 
     sPort.write(ByteReference[1])
-    
+
     logging.debug("Initial Handshake Initiated! - Received ")
 
     msg = sPort.read(1)
 
     if msg is ByteReference[2]:
         logging.debug("Received " + (str)(repr(msg)) + ", Sending Control Word..")
-             
+
         lControlWordInteger = getControlWord(sDeviceBaud, sCPUSpeed)
         lControlWordPacked = struct.pack('<i', lControlWordInteger)
 
@@ -293,7 +293,7 @@ if msg is ByteReference[0]:
                     logging.debug("Requested Baudrate different from Default. Changing Baudrate..")
 
                     sPort.baudrate = sDeviceBaud
-                    
+
                 else:
                     logging.debug("BaudRate same as Default")
 
@@ -316,7 +316,7 @@ if msg is ByteReference[0]:
 
                     logging.debug("CPU Description String = %s", CPUDescString)
 
-                    boardParameters = getBoardParameters(CPUDescString) 
+                    boardParameters = getBoardParameters(CPUDescString)
 
                     # Receive OK from SJOne
                     msg = sPort.read(1)
@@ -336,10 +336,10 @@ if msg is ByteReference[0]:
 
                     paddingCount = len(binArray) - ((len(binArray)) % int(boardParameters['BlockSize']))
                     logging.debug("Total Padding Count = %d", paddingCount)
-    
-                    totalBlocks = math.ceil(totalBlocks)    
+
+                    totalBlocks = math.ceil(totalBlocks)
                     print "Total # of Blocks to be Flashed = ", totalBlocks
-                    
+
                     # Pad 0's to binArray if required.
                     binArray = bytearray(binArray)
                     binArray += (b'\x00' * paddingCount)
@@ -348,7 +348,7 @@ if msg is ByteReference[0]:
                     sendDummy = False
                     #sendDummy = True
                     blockContent = bytearray(int(boardParameters['BlockSize']))
-		
+
                     if sendDummy == True:
                         logging.debug("FLASHING EMPTY BLOCKS")
 #
@@ -356,7 +356,7 @@ if msg is ByteReference[0]:
                     	print "--------------------"
 
                     	blockCountPacked = struct.pack('<H', blockCount)
-			
+
 		        msg = sPort.write(blockCountPacked[1])
                         if msg != 1:
                             logging.error("Error in Sending BlockCountLowAddr")
@@ -364,21 +364,21 @@ if msg is ByteReference[0]:
                         msg = sPort.write(blockCountPacked[0])
                         if msg != 1:
                             logging.error("Error in Sending BlockCountHiAddr")
-                        
+
                         logging.debug("BlockCounts = %d", blockCount)
-			
+
                         if sendDummy == False:
                             blockContent = getPageContent(binArray, blockCount, int(boardParameters['BlockSize']))
-                        
+
                         msg = sPort.write(blockContent)
                         if msg != len(blockContent):
                             logging.error("Error - Failed to sending Data Block Content")
                             break
-                        
+
                         #printContent(blockContent)
 
                         checksum = bytearray(1)
-                        
+
                         checksum[0] = getChecksum(blockContent)
 
                         logging.debug("Checksum = %d[0x%x]", checksum[0], checksum[0])
@@ -395,9 +395,9 @@ if msg is ByteReference[0]:
                         else:
                         	print "Block # " + str(blockCount) + " flashed!"
                         	blockCount = blockCount + 1
-                    	
+
                     	print "--------------------"
-                    
+
                     if blockCount != totalBlocks:
                         logging.error("Error - All Blocks not Flashed")
                         logging.error("Total = " + str(totalBlocks))
