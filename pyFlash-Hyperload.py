@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # SJSU - AV #
 
 ########
@@ -15,14 +16,15 @@ import math
 import serial.serialutil 
 import logging
 import sys
+import getopt
 from intelhex import IntelHex
 
 ###############################################################################
 ################# CONFIGURATION FOR pyFlash - Hyperload ######################
 ###############################################################################
-sDeviceFile = "/dev/ttyUSB0"   # Device File Path
+sDeviceFile = "/dev/tty.usbserial-A503JOHW-D"   # Device File Path
 sDeviceBaud = 1000000          # Suitable Device Baud Rate
-sHexFilePath = "/home/akshayvijaykumar/SJSU/cmpe244/python/lpc1758_freertos.hex"
+sHexFilePath = "/Users/atkvo/Workspace/eclipse/test/Debug/test.hex-D"
 sGenerateBinary = "y" # "y" - Yes | "n" - No
 ###############################################################################
 
@@ -162,21 +164,21 @@ def getPageContent(bArray, blkCount, pageSize):
     lPageContent = bytearray(pageSize)
     for x in range(0, pageSize):
         lPageContent[x] = bArray[x + (blkCount * pageSize)]
-		
+
     #print "Length of x = ", x
 
     if x != pageSize - 1:
         raw_input()
-        
+
     return lPageContent
-                    	
+
 
 def getChecksum(blocks):
 
     # Try older method - Add and Pack into integer.
-    lChecksum = bytearray(1);
+    lChecksum = bytearray(1)
     for x in blocks:
-	lChecksum[0] = (lChecksum[0] + x) % 256
+        lChecksum[0] = (lChecksum[0] + x) % 256
 
     return lChecksum[0]
 
@@ -185,6 +187,42 @@ def getChecksum(blocks):
 ### Main Program ###
 
 printIntroMessage()
+
+if sys.argv > 1:
+    # we have more arguments
+    port = ''
+    file = ''
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hp:f:", ["port=", "file="])
+        for opt, arg in opts:
+            print 'checking...'
+            if opt == '-h':
+                print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
+            elif opt in ("-p", "--port"):
+                port = arg
+                print 'got port: ' + port
+            elif opt in ("-f", "--file"):
+                file = arg
+                print 'got file: ' + file
+
+        print port
+        print file
+        if len(port) is 0 or len(file) is 0:
+            print 'not enough arguments supplied.'
+            print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
+            sys.exit(2)
+        else:
+            sHexFilePath = file
+            sDeviceFile = port
+
+    except getopt.GetoptError:
+        print 'getopt error'
+        print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
+        sys.exit(2)
+else:
+    # use default settings
+    print 'no command line switches detected: using default settings'
+    pass
 
 print str('-' * (len(sHexFilePath) + 20))
 print "Hex File Path = \"" + sHexFilePath + "\""
