@@ -3,6 +3,7 @@
 
 ########
 # CHANGELOG:
+# 2017-02-11 : Added command line settings change support
 # 2016-02-15 : Working Skeleton for Flashing a Hex file to SJOne comeplete!
 #
 
@@ -62,7 +63,7 @@ else:
 
 # Global Defines
 
-ApplicationVersion = "1.0"
+ApplicationVersion = "1.1"
 ToolName = "pyFLASH - HYPERLOAD"
 ToolInfo = "Flashing Tool for SJOne"
 BaudList = [4800, 9600, 19200, 38400]
