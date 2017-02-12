@@ -20,15 +20,14 @@ A firmware flashing tool for SJOne using Python. This is based on the 'Hyperload
 ### Method 2 - Commandline arguments
 This method can be useful for incorporating into a Makefile or Eclipse rule to automatically program the board
 
-Usage: 
-`python pyFlash-Hyperload.py -p port -f file [-b baud]`
-or 
-`python pyFlash-Hyperload.py --port=port --file=file [--baud=baud]`
+* Usage: 
+    - short-hand: `python pyFlash-Hyperload.py -p port -f file [-b baud]`
+    - long-hand: `python pyFlash-Hyperload.py --port=port --file=file [--baud=baud]`
 
 
 Example:
 ```
-./pyFlash-Hyperload.py -p /dev/tty.usbserial-A503JOHW -f /Users/[username]/Workspace/eclipse/temp/Debug/test.hex
+./pyFlash-Hyperload.py -p /dev/tty.usbserial-A503JOHW -f /path/to/your/file.hex
 ```
 
 
@@ -36,19 +35,17 @@ Example:
 
 ### Notes
 
-* Make sure to not mix `spaces` with `tab` tabbing on your editor. 
+* Make sure to not mix `spaces` with `tab` tabbing on the editor. Stick with 4 spaces for consistency.
 
 ### Things to Do:
 
-```
-1. Display Platform Information                               [DONE]
-2. Enable a Debug/Release Switch                              [DONE]
-3. Create ~/.pyFlash and store last used options for Flashing [PEND]
-4. Handle Exceptions                                          [PEND]
-5. Ensure packing is done based on Endianness                 [PEND]
-6. Re-write program with classes using this as the backbone.  [PEND]
-7. Incorporate design decisions keeping the GUI in mind       [PEND]
-```
+- [x] Display platform information
+- [ ] Enable debug/release switch
+- [ ] Create ~/.pyFlash and store last used options for flashing
+- [ ] Handle exceptions
+- [ ] Ensure packing is done based on Endianness
+- [ ] Rewrite program with classes using this as the backbone
+- [ ] Incorporate design decisions keeping GUI in mind
 
 ### Issues Faced
 1. Handling Bytes were hard - Use bytearray for most of the IO related functions. Difference between bytes and bytearray is that the latter is mutable. 
