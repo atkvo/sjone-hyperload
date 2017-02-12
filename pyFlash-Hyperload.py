@@ -238,6 +238,57 @@ def getCommandlineArgs():
 # Class
 
 
+# params binArray, blockContent, blockSize, blockCount, totalBlocks
+def flash(sPort, binArray, blockContent,
+          blockSize, totalBlocks, sendDummy=False):
+    blockCount = 0
+    while blockCount < totalBlocks:
+        print "--------------------"
+        blockCountPacked = struct.pack('<H', blockCount)
+
+        msg = sPort.write(blockCountPacked[1])
+        if msg != 1:
+            logging.error("Error in Sending BlockCountLowAddr")
+
+        msg = sPort.write(blockCountPacked[0])
+        if msg != 1:
+            logging.error("Error in Sending BlockCountHiAddr")
+
+        logging.debug("BlockCounts = %d", blockCount)
+
+        if sendDummy is False:
+            blockContent = getPageContent(binArray, blockCount, blockSize)
+
+        msg = sPort.write(blockContent)
+        if msg != len(blockContent):
+            logging.error("Error - Failed to sending Data Block Content")
+            break
+
+        # printContent(blockContent)
+
+        checksum = bytearray(1)
+
+        checksum[0] = getChecksum(blockContent)
+
+        logging.debug("Checksum = %d[0x%x]", checksum[0], checksum[0])
+
+        msg = sPort.write(checksum)
+        logging.debug("Size of Block Written = %d", msg)
+
+        if msg != 1:
+            logging.error("Error - Failed to send Entire Data Block")
+
+        msg = sPort.read(1)
+        if msg != SpecialChar['OK']:
+            logging.error("Failed to Receive Ack.. Retrying #" + str(blockCount))
+        else:
+            print "Block # " + str(blockCount) + " flashed!"
+            blockCount = blockCount + 1
+
+        print "--------------------"
+    return blockCount
+
+
 # Main Program ###
 def main():
     global sDeviceFile
@@ -386,56 +437,18 @@ def main():
                         blockCount = 0
                         sendDummy = False
                         # sendDummy = True
-                        blockContent = bytearray(int(boardParameters['BlockSize']))
+                        blockSize = int(boardParameters['BlockSize'])
+                        blockContent = bytearray(blockSize)
 
                         if sendDummy is True:
                             logging.debug("FLASHING EMPTY BLOCKS")
 
-                        while blockCount < totalBlocks:
-                            print "--------------------"
-                            blockCountPacked = struct.pack('<H', blockCount)
-
-                            msg = sPort.write(blockCountPacked[1])
-                            if msg != 1:
-                                logging.error("Error in Sending BlockCountLowAddr")
-
-                            msg = sPort.write(blockCountPacked[0])
-                            if msg != 1:
-                                logging.error("Error in Sending BlockCountHiAddr")
-
-                            logging.debug("BlockCounts = %d", blockCount)
-
-                            if sendDummy is False:
-                                blockContent = getPageContent(binArray, blockCount, int(boardParameters['BlockSize']))
-
-                            msg = sPort.write(blockContent)
-                            if msg != len(blockContent):
-                                logging.error("Error - Failed to sending Data Block Content")
-                                break
-
-                            # printContent(blockContent)
-
-                            checksum = bytearray(1)
-
-                            checksum[0] = getChecksum(blockContent)
-
-                            logging.debug("Checksum = %d[0x%x]", checksum[0], checksum[0])
-
-                            msg = sPort.write(checksum)
-                            logging.debug("Size of Block Written = %d", msg)
-
-                            if msg != 1:
-                                logging.error("Error - Failed to send Entire Data Block")
-
-                            msg = sPort.read(1)
-                            if msg != SpecialChar['OK']:
-                            	logging.error("Failed to Receive Ack.. Retrying #" + str(blockCount))
-                            else:
-                                print "Block # " + str(blockCount) + " flashed!"
-                                blockCount = blockCount + 1
-
-                            print "--------------------"
-
+                        blockCount = flash(sPort,
+                                           binArray,
+                                           blockContent,
+                                           blockSize,
+                                           totalBlocks,
+                                           sendDummy)
                     if blockCount != totalBlocks:
                         logging.error("Error - All Blocks not Flashed")
                         logging.error("Total = " + str(totalBlocks))
