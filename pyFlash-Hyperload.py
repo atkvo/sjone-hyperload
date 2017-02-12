@@ -181,6 +181,31 @@ def getPageContent(bArray, blkCount, pageSize):
     return lPageContent
 
 
+def getBinaryFromIHex(filepath, generateBin):
+    # Fetching Hex File and Storing
+    hexFile = IntelHex(filepath)
+
+    if generateBin == "y":
+        # Create a Binary File of this Hex File
+        binFilePath = string.replace(filepath, ".hex", ".bin")
+        logging.debug("Binary File Path : %s", binFilePath)
+        hexFile.tofile(binFilePath, format='bin')
+
+    # Obtain the actual Binary content from the Hex File
+    binary = hexFile.tobinarray()
+    return binary
+
+
+def padBinaryArray(binArray, blockSize):
+    paddingCount = (len(binArray) - (len(binArray)
+                    % blockSize))
+    logging.debug("Total Padding Count = %d", paddingCount)
+    # Pad 0's to binArray if required.
+    binArray = bytearray(binArray)
+    binArray += (b'\x00' * paddingCount)
+    return binArray
+
+
 def getChecksum(blocks):
 
     # Try older method - Add and Pack into integer.
@@ -317,17 +342,17 @@ def main():
     print "Hex File Path = \"" + sHexFilePath + "\""
     print str('-' * (len(sHexFilePath) + 20))
 
-    # Fetching Hex File and Storing
-    hexFile = IntelHex(sHexFilePath)
+    # # Fetching Hex File and Storing
+    # hexFile = IntelHex(sHexFilePath)
 
-    if sGenerateBinary == "y":
-        # Create a Binary File of this Hex File
-        sBinFilePath = string.replace(sHexFilePath, ".hex", ".bin")
-        logging.debug("Binary File Path : %s", sBinFilePath)
-        hexFile.tofile(sBinFilePath, format='bin')
+    # if sGenerateBinary == "y":
+    #     # Create a Binary File of this Hex File
+    #     sBinFilePath = string.replace(sHexFilePath, ".hex", ".bin")
+    #     logging.debug("Binary File Path : %s", sBinFilePath)
+    #     hexFile.tofile(sBinFilePath, format='bin')
 
-    # Obtain the actual Binary content from the Hex File
-    binArray = hexFile.tobinarray()
+    # # Obtain the actual Binary content from the Hex File
+    # binArray = hexFile.tobinarray()
 
     sPort = serial.Serial(port=sDeviceFile,
                           baudrate=sInitialDeviceBaud,
@@ -417,35 +442,24 @@ def main():
                         else:
                             logging.debug("OK Received! Sending Block")
 
-                        # Send Dummy Blocks -
-                        # Update : We can send the actual blocks itself.
-
-                        # Sending Blocks of Binary File
-                        totalBlocks = (len(binArray) * 1.0
-                                       / int(boardParameters['BlockSize']))
-                        logging.debug("Total Blocks = %f", totalBlocks)
-
-                        paddingCount = (len(binArray)
-                                        - ((len(binArray))
-                                           % int(boardParameters['BlockSize'])))
-                        logging.debug("Total Padding Count = %d", paddingCount)
-
+                        binArray = getBinaryFromIHex(sHexFilePath, sGenerateBinary)
+                        blockSize = int(boardParameters['BlockSize'])
+                        totalBlocks = (len(binArray) * 1.0) / blockSize
                         totalBlocks = math.ceil(totalBlocks)
+                        binArray = padBinaryArray(binArray, blockSize)
+
+                        logging.debug("Total Blocks = %f", totalBlocks)
                         print "Total # of Blocks to be Flashed = ", totalBlocks
 
-                        # Pad 0's to binArray if required.
-                        binArray = bytearray(binArray)
-                        binArray += (b'\x00' * paddingCount)
-
-                        blockCount = 0
-                        sendDummy = False
-                        # sendDummy = True
-                        blockSize = int(boardParameters['BlockSize'])
                         blockContent = bytearray(blockSize)
 
+                        # Send Dummy Blocks -
+                        # Update : We can send the actual blocks itself.
+                        sendDummy = False
                         if sendDummy is True:
                             logging.debug("FLASHING EMPTY BLOCKS")
 
+                        # Sending Blocks of Binary File
                         blockCount = flash(sPort,
                                            binArray,
                                            blockContent,
