@@ -371,6 +371,27 @@ def setBoardBaud(sp, baud, cpuSpeed):
         return False
 
 
+def getCpuDescription(sp):
+    """ Phase 2.1 Should be called immediately after setting the board baud rate.
+        Example CPU description: "$LPC1758:4096:2048:512\n"
+    """
+    print 'Getting CPU description'
+    msg = sp.read(1)
+
+    if msg is SpecialChar['Dollar']:
+        # begin building CPU description string
+        CPUDescString = SpecialChar['Dollar']
+        while True:
+            msg = sp.read(1)
+            if msg == SpecialChar['NextLine']:
+                return CPUDescString
+            else:
+                print 'Adding to CPU string'
+                CPUDescString = CPUDescString + msg
+    else:
+        return ""
+
+
 # Main Program ###
 def main():
     global sDeviceFile
@@ -425,23 +446,10 @@ def main():
             else:
                 logging.debug("BaudRate same as Default")
 
-            # Read the CPU Desc String
-            msg = sPort.read(1)
-
-            if msg != SpecialChar['Dollar']:
-                logging.error("Failed to read CPU Description String")
+            CPUDescString = getCpuDescription(sPort)
+            if len(CPUDescString) < 0:
+                prematureExit(sPort, "Error: CPU string not read")
             else:
-                logging.debug("Reading CPU Desc String..")
-
-                CPUDescString = SpecialChar['Dollar']
-                while True:
-                    msg = sPort.read(1)
-
-                    if msg == SpecialChar['NextLine']:
-                        break
-
-                    CPUDescString = CPUDescString + msg
-
                 # should have CPU string by now
                 logging.debug(
                     "CPU Description String = %s", CPUDescString)
