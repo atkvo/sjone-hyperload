@@ -38,6 +38,7 @@ Example:
 ### Notes
 * Make sure to not mix `spaces` with `tab` tabbing on the editor. Stick with 4 spaces for consistency.
 * [Hyperload Protocol](http://www.socialledge.com/sjsu/index.php?title=Hyperload_Protocol)
+
 ### TODO
 
 - [x] Display platform information
