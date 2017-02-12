@@ -386,7 +386,6 @@ def getCpuDescription(sp):
             if msg == SpecialChar['NextLine']:
                 return CPUDescString
             else:
-                print 'Adding to CPU string'
                 CPUDescString = CPUDescString + msg
     else:
         return ""
