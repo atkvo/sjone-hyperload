@@ -37,10 +37,10 @@ Example:
 
 * Make sure to not mix `spaces` with `tab` tabbing on the editor. Stick with 4 spaces for consistency.
 
-### Things to Do:
+### TODO
 
 - [x] Display platform information
-- [ ] Enable debug/release switch
+- [x] Enable debug/release switch
 - [ ] Create ~/.pyFlash and store last used options for flashing
 - [ ] Handle exceptions
 - [ ] Ensure packing is done based on Endianness
