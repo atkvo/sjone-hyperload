@@ -392,6 +392,50 @@ def getCpuDescription(sp):
         return ""
 
 
+def hyperloadPhase1(sp, baud):
+    """
+    Args:
+        sp   (Serial) : serial port to communicate with the SJOne board
+        baud (int)    : desired baud rate to program the board at
+    Returns:
+        (success, errMsg): is a tuple 
+    Raises:
+
+    """
+
+    # Protocol Phase 1
+    if getHandshakeStatus(sp, ByteReference) is False:
+        return (False, "Phase 1 Error: Handshake failure.")
+
+    if setBoardBaud(sp, baud, sCPUSpeed) is False:
+        return (False, "Phase 1 Error: Setting board baud rate failure.")
+
+    if baud != sInitialDeviceBaud:
+        # Switch to new BaudRate here.
+        logging.debug("Requested Baudrate different from Default. \
+                       Changing Baudrate..")
+        sp.baudrate = baud
+    else:
+        logging.debug("BaudRate same as Default")
+
+    return (True, "Phase 1 complete")
+
+
+def hyperloadPhase2(sp):
+    # Protocol Phase 2
+    descr = getCpuDescription(sp)
+    if len(descr) > 0:
+        msg = sp.read(1)  # check for OK response from SJOne
+        if msg != SpecialChar['OK']:
+            logging.error("Phase 2 Error: Failed to receive OK")
+            return (False, "", "Phase 2 Error: Failed to receive OK")
+        else:
+            logging.debug("Phase 2 complete")
+            return (True, descr, "Phase 2 complete")
+    else:
+        return (False, descr, "Phase 2 Error: Failed to get CPU description")
+
+
 # Main Program ###
 def main():
     global sDeviceFile
@@ -405,11 +449,10 @@ def main():
             sDeviceFile = p
             sHexFilePath = f
             if b > 0:
-                # user specified baud rate
-                sDeviceBaud = b
+                sDeviceBaud = b  # set to user specified baud
             else:
-                # fall back to hard-coded baud rate
-                pass
+                pass  # fall back to hard-coded baud rate
+
         except ValueError:
             print 'usage: ' + sys.argv[0] + ' -p port -f hexfile [-b baudrate]'
             sys.exit(2)
@@ -432,91 +475,80 @@ def main():
     sPort.reset_output_buffer()
     sPort.flush()
 
-    if getHandshakeStatus(sPort, ByteReference) is True:
+    # ---- Hyperload Phase 1 ----
+    status, errMsg = hyperloadPhase1(sPort, sDeviceBaud)
 
-        if setBoardBaud(sPort, sDeviceBaud, sCPUSpeed) is True:
-        # From here on out will be to flash the board
-            if sDeviceBaud != sInitialDeviceBaud:
-                # Switch to new BaudRate here.
-                logging.debug("Requested Baudrate different from Default. \
-                               Changing Baudrate..")
+    if status is False:
+        # failure. don't flash
+        prematureExit(sPort, errMsg)
+    else:
+        pass
+    # ---- Phase 1 complete ----
 
-                sPort.baudrate = sDeviceBaud
+    # ---- Hyperload Phase 2 ----
+    status, CPUDescString, errMsg = hyperloadPhase2(sPort)
 
-            else:
-                logging.debug("BaudRate same as Default")
+    if status is False:
+        # phase 2 failure. abort.
+        prematureExit(sPort, errMsg)
+    else:
+        pass
+    # ---- Phase 2 complete ----
 
-            CPUDescString = getCpuDescription(sPort)
-            if len(CPUDescString) < 0:
-                prematureExit(sPort, "Error: CPU string not read")
-            else:
-                # should have CPU string by now
-                logging.debug(
-                    "CPU Description String = %s", CPUDescString)
+    logging.debug("CPU Description String = %s", CPUDescString)
 
-                boardParameters = getBoardParameters(CPUDescString)
+    # Prepare for phase 3
+    boardParameters = getBoardParameters(CPUDescString)
 
-                # Receive OK from SJOne
-                msg = sPort.read(1)
+    binArray = getBinaryFromIHex(sHexFilePath, sGenerateBinary)
+    blockSize = int(boardParameters['BlockSize'])
+    totalBlocks = (len(binArray) * 1.0) / blockSize
+    totalBlocks = math.ceil(totalBlocks)
+    binArray = padBinaryArray(binArray, blockSize)
+    blockContent = bytearray(blockSize)
 
-                if msg != SpecialChar['OK']:
-                    logging.error("Error - Failed to Receive OK")
-                else:
-                    logging.debug("OK Received! Sending Block")
+    logging.debug("Total Blocks = %f", totalBlocks)
+    print "Total # of Blocks to be Flashed = ", totalBlocks
 
-                binArray = getBinaryFromIHex(sHexFilePath, sGenerateBinary)
-                blockSize = int(boardParameters['BlockSize'])
-                totalBlocks = (len(binArray) * 1.0) / blockSize
-                totalBlocks = math.ceil(totalBlocks)
-                binArray = padBinaryArray(binArray, blockSize)
+    # Send Dummy Blocks -
+    # Update : We can send the actual blocks itself.
+    sendDummy = False
+    if sendDummy is True:
+        logging.debug("FLASHING EMPTY BLOCKS")
 
-                logging.debug("Total Blocks = %f", totalBlocks)
-                print "Total # of Blocks to be Flashed = ", totalBlocks
+    # ---- Hyperload Phase 3 ----
+    # Sending Blocks of Binary File
+    blockCount = flash(sPort,
+                       binArray,
+                       blockContent,
+                       blockSize,
+                       totalBlocks,
+                       sendDummy)
+    if blockCount != totalBlocks:
+        logging.error("Error - All Blocks not Flashed")
+        logging.error("Total = {}".format(totalBlocks))
+        logging.error("# of Blocks Flashed = {}"
+                      .format(blockCount))
+    else:
+        print "Flashing Successful!"
+        endTxPacked = bytearray(2)
+        endTxPacked[0] = 0xFF
+        endTxPacked[1] = 0xFF
 
-                blockContent = bytearray(blockSize)
+        msg = sPort.write(bytearray(endTxPacked))
 
-                # Send Dummy Blocks -
-                # Update : We can send the actual blocks itself.
-                sendDummy = False
-                if sendDummy is True:
-                    logging.debug("FLASHING EMPTY BLOCKS")
+        if msg != 2:
+            logging.error("Error Sending \
+                End Of Transaction Signal")
 
-                # Sending Blocks of Binary File
-                blockCount = flash(sPort,
-                                   binArray,
-                                   blockContent,
-                                   blockSize,
-                                   totalBlocks,
-                                   sendDummy)
-            if blockCount != totalBlocks:
-                logging.error("Error - All Blocks not Flashed")
-                logging.error("Total = {}".format(totalBlocks))
-                logging.error("# of Blocks Flashed = {}"
-                              .format(blockCount))
-            else:
-                print "Flashing Successful!"
-                endTxPacked = bytearray(2)
-                endTxPacked[0] = 0xFF
-                endTxPacked[1] = 0xFF
+        msg = sPort.read(1)
+        logging.debug("Received Ack = " + str(msg))
 
-                msg = sPort.write(bytearray(endTxPacked))
-
-                if msg != 2:
-                    logging.error("Error Sending \
-                        End Of Transaction Signal")
-
-                msg = sPort.read(1)
-                logging.debug("Received Ack = " + str(msg))
-
-                if msg != SpecialChar['STAR']:
-                    logging.error("Error - Final Ack Not Received")
-
-# REDUCING THIS
-    # else:
-    #     logging.error("Timed Out!")
+        if msg != SpecialChar['STAR']:
+            logging.error("Error - Final Ack Not Received")
+    # ---- Phase 3 Complete ----
 
     sPort.baudrate = sInitialDeviceBaud
-
     sPort.close()
 
 
