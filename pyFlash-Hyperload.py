@@ -198,12 +198,12 @@ def getCommandlineArgs():
     # we have more arguments
     port = ''
     file = ''
+    baud = -1
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   "hp:f:",
-                                   ["port=", "file="])
+                                   "hp:f:b:",
+                                   ["port=", "file=", "baud="])
         for opt, arg in opts:
-            print 'checking...'
             if opt == '-h':
                 print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
             elif opt in ("-p", "--port"):
@@ -212,7 +212,11 @@ def getCommandlineArgs():
             elif opt in ("-f", "--file"):
                 file = arg
                 print 'got file: ' + file
-
+            elif opt in ("-b", "--baud"):
+                try:
+                    baud = int(arg)
+                except ValueError:
+                    raise ValueError('Baud rate invalid: ' + arg + 'Exiting.')
         print port
         print file
         if len(port) is 0 or len(file) is 0:
@@ -221,7 +225,7 @@ def getCommandlineArgs():
             raise ValueError('GetoptError detected')
             # sys.exit(2)
         else:
-            return (port, file)
+            return (port, file, baud)
             # sHexFilePath = file
             # sDeviceFile = port
     except getopt.GetoptError:
@@ -242,11 +246,17 @@ def main():
     printIntroMessage()
     if len(sys.argv) > 1:
         try:
-            p, f = getCommandlineArgs()
+            p, f, b = getCommandlineArgs()
             sDeviceFile = p
             sHexFilePath = f
+            if b > 0:
+                # user specified baud rate
+                sDeviceBaud = b
+            else:
+                # fall back to hard-coded baud rate
+                pass
         except ValueError:
-            print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
+            print 'usage: ' + sys.argv[0] + ' -p port -f hexfile [-b baudrate]'
             sys.exit(2)
     else:
         # use default settings
