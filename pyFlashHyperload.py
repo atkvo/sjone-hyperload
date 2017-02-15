@@ -18,14 +18,7 @@ import getopt
 import pyFlashHyperloadGUI
 from intelhex import IntelHex
 
-###############################################################################
-# CONFIGURATION FOR pyFlash - Hyperload #######################################
-###############################################################################
-sDeviceFile = "/dev/tty.usbserial-A503JOND"   # Device File Path
-sDeviceBaud = 38400          # Suitable Device Baud Rate
-sHexFilePath = "/Users/dev/Programming_Projects/sjone-hyperload/lpc1758_freertos_GPIO.hex"
-sGenerateBinary = "y"  # "y" - Yes | "n" - No
-###############################################################################
+
 
 # LOGGING OPTIONS #######
 PYFLASH_DEBUG_LOG = "no"  # "yes" - Debug Version. "no" - Release Version
@@ -61,9 +54,19 @@ else:
 
 
 
-class HLBackend(self):
+class HLBackend:
 
     def __init__(self):
+
+        ###############################################################################
+        # CONFIGURATION FOR pyFlash - Hyperload #######################################
+        ###############################################################################
+        self.sDeviceFile = "/dev/tty.usbserial-A503JOND"   # Device File Path
+        self.sDeviceBaud = 38400          # Suitable Device Baud Rate
+        self.sHexFilePath = "/Users/dev/Programming_Projects/sjone-hyperload/lpc1758_freertos_GPIO.hex"
+        self.sGenerateBinary = "y"  # "y" - Yes | "n" - No
+        ###############################################################################
+
         self.ApplicationVersion = "1.1"
         self.ToolName = "pyFLASH - HYPERLOAD"
         self.ToolInfo = "Flashing Tool for SJOne"
@@ -76,7 +79,7 @@ class HLBackend(self):
         self.ByteReference = b'\xff\x55\xaa'
 
     # Common Util Functions
-    def printIntroMessage():
+    def printIntroMessage(self):
         print "#######################"
         print " ", self.ToolName
         print self.ToolInfo
@@ -88,7 +91,7 @@ class HLBackend(self):
         return
 
 
-    def printBytes(mymsg):
+    def printBytes(self,mymsg):
 
         print "Type info = " + (str)(type(mymsg))
 
@@ -111,7 +114,7 @@ class HLBackend(self):
         return
 
 
-    def getBoardParameters(descString):
+    def getBoardParameters(self,descString):
         boardParameters = {'Board': '',
                            'BlockSize': '',
                            'BootloaderSize': '',
@@ -135,7 +138,7 @@ class HLBackend(self):
         return boardParameters
 
 
-    def printContent(lContent):
+    def printContent(self,lContent):
 
         logging.debug("--------------------")
         count = 0
@@ -156,7 +159,7 @@ class HLBackend(self):
         return
 
 
-    def getControlWord(baudRate, cpuSpeed):
+    def getControlWord(self,baudRate, cpuSpeed):
         # TODO : Currently using known values. Replace with actual formula
         logging.debug("Retrieving Control Word")
 
@@ -165,7 +168,7 @@ class HLBackend(self):
         return controlWord
 
 
-    def getPageContent(bArray, blkCount, pageSize):
+    def getPageContent(self, bArray, blkCount, pageSize):
 
         # startOffset = blkCount * pageSize         # this variable is never used
         # endOffset = (startOffset + pageSize - 1)  # this variable is never used
@@ -184,7 +187,7 @@ class HLBackend(self):
         return lPageContent
 
 
-    def getBinaryFromIHex(filepath, generateBin):
+    def getBinaryFromIHex(self,filepath, generateBin):
         # Fetching Hex File and Storing
         hexFile = IntelHex(filepath)
 
@@ -199,7 +202,7 @@ class HLBackend(self):
         return binary
 
 
-    def padBinaryArray(binArray, blockSize):
+    def padBinaryArray(self,binArray, blockSize):
         paddingCount = (len(binArray) - (len(binArray)
                         % blockSize))
         logging.debug("Total Padding Count = %d", paddingCount)
@@ -209,7 +212,7 @@ class HLBackend(self):
         return binArray
 
 
-    def getChecksum(blocks):
+    def getChecksum(self,blocks):
 
         # Try older method - Add and Pack into integer.
         lChecksum = bytearray(1)
@@ -220,7 +223,7 @@ class HLBackend(self):
 
 
     # port and file are REQUIRED at minimum, otherwise a ValueError is raised
-    def getCommandlineArgs():
+    def getCommandlineArgs(self):
         # we have more arguments
         port = ''
         file = ''
@@ -248,15 +251,18 @@ class HLBackend(self):
                         raise ValueError('Baud rate invalid: ' + arg + 'Exiting.')
             print port
             print file
-            if len(port) is 0 or len(file) is 0:
-                print 'not enough arguments supplied.'
-                # print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
-                raise ValueError('GetoptError detected')
-                # sys.exit(2)
+            if not gui:
+                if len(port) is 0 or len(file) is 0:
+                    print 'not enough arguments supplied.'
+                    # print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
+                    raise ValueError('GetoptError detected')
+                    # sys.exit(2)
+                else:
+                    return (port, file, baud, gui)
+                    # self.sHexFilePath = file
+                    # self.sDeviceFile = port
             else:
                 return (port, file, baud, gui)
-                # sHexFilePath = file
-                # sDeviceFile = port
         except getopt.GetoptError:
             print 'getopt error'
             # print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
@@ -267,7 +273,7 @@ class HLBackend(self):
 
 
     # params binArray, blockContent, blockSize, blockCount, totalBlocks
-    def flash(sPort, binArray, blockContent,
+    def flash(self,sPort, binArray, blockContent,
               blockSize, totalBlocks, sendDummy=False):
         blockCount = 0
         while blockCount < totalBlocks:
@@ -285,7 +291,7 @@ class HLBackend(self):
             logging.debug("BlockCounts = %d", blockCount)
 
             if sendDummy is False:
-                blockContent = getPageContent(binArray, blockCount, blockSize)
+                blockContent = self.getPageContent(binArray, blockCount, blockSize)
 
             msg = sPort.write(blockContent)
             if msg != len(blockContent):
@@ -296,7 +302,7 @@ class HLBackend(self):
 
             checksum = bytearray(1)
 
-            checksum[0] = getChecksum(blockContent)
+            checksum[0] = self.getChecksum(blockContent)
 
             logging.debug("Checksum = %d[0x%x]", checksum[0], checksum[0])
 
@@ -318,14 +324,14 @@ class HLBackend(self):
         return blockCount
 
 
-    def prematureExit(serialport, message):
+    def prematureExit(self,serialport, message):
         logging.error("{}. Exiting...".format(message))
         serialport.baudrate = self.sInitialDeviceBaud
         serialport.close()
         sys.exit(2)
 
 
-    def getHandshakeStatus(sp, handshakeBytes):
+    def getHandshakeStatus(self,sp, handshakeBytes):
         """
         handshakeBytes expects the handshake
          protocol bytes in alternating order
@@ -358,8 +364,8 @@ class HLBackend(self):
             return False
 
 
-    def setBoardBaud(sp, baud, cpuSpeed):
-        lControlWordInteger = getControlWord(baud, cpuSpeed)
+    def setBoardBaud(self,sp, baud, cpuSpeed):
+        lControlWordInteger = self.getControlWord(baud, cpuSpeed)
         lControlWordPacked = struct.pack('<i', lControlWordInteger)
 
         bytesWritten = sp.write(lControlWordPacked)
@@ -377,7 +383,7 @@ class HLBackend(self):
             return False
 
 
-    def getCpuDescription(sp):
+    def getCpuDescription(self,sp):
         """ Phase 2.1 Should be called immediately after setting the board baud rate.
             Example CPU description: "$LPC1758:4096:2048:512\n"
         """
@@ -397,7 +403,7 @@ class HLBackend(self):
             return ""
 
 
-    def hyperloadPhase1(sp, baud):
+    def hyperloadPhase1(self,sp, baud):
         """
         Args:
             sp   (Serial) : serial port to communicate with the SJOne board
@@ -409,10 +415,10 @@ class HLBackend(self):
         """
 
         # Protocol Phase 1
-        if getHandshakeStatus(sp, self.ByteReference) is False:
+        if self.getHandshakeStatus(sp, self.ByteReference) is False:
             return (False, "Phase 1 Error: Handshake failure.")
 
-        if setBoardBaud(sp, baud, self.sCPUSpeed) is False:
+        if self.setBoardBaud(sp, baud, self.sCPUSpeed) is False:
             return (False, "Phase 1 Error: Setting board baud rate failure.")
 
         if baud != self.sInitialDeviceBaud:
@@ -426,9 +432,9 @@ class HLBackend(self):
         return (True, "Phase 1 complete")
 
 
-    def hyperloadPhase2(sp):
+    def hyperloadPhase2(self,sp):
         # Protocol Phase 2
-        descr = getCpuDescription(sp)
+        descr = self.getCpuDescription(sp)
         if len(descr) > 0:
             msg = sp.read(1)  # check for OK response from SJOne
             if msg != self.SpecialChar['OK']:
@@ -441,13 +447,13 @@ class HLBackend(self):
             return (False, descr, "Phase 2 Error: Failed to get CPU description")
 
 
-    def CLmode():
+    def CLmode(self):
 
-        print str('-' * (len(sHexFilePath) + 20))
-        print "Hex File Path = \"" + sHexFilePath + "\""
-        print str('-' * (len(sHexFilePath) + 20))
+        print str('-' * (len(self.sHexFilePath) + 20))
+        print "Hex File Path = \"" + self.sHexFilePath + "\""
+        print str('-' * (len(self.sHexFilePath) + 20))
 
-        sPort = serial.Serial(port=sDeviceFile,
+        sPort = serial.Serial(port=self.sDeviceFile,
                               baudrate=self.sInitialDeviceBaud,
                               parity=serial.PARITY_NONE,
                               stopbits=serial.STOPBITS_ONE,
@@ -458,21 +464,21 @@ class HLBackend(self):
         sPort.flush()
 
         # ---- Hyperload Phase 1 ----
-        status, errMsg = hyperloadPhase1(sPort, sDeviceBaud)
+        status, errMsg = self.hyperloadPhase1(sPort, self.sDeviceBaud)
 
         if status is False:
             # failure. don't flash
-            prematureExit(sPort, errMsg)
+            self.prematureExit(sPort, errMsg)
         else:
             pass
         # ---- Phase 1 complete ----
 
         # ---- Hyperload Phase 2 ----
-        status, CPUDescString, errMsg = hyperloadPhase2(sPort)
+        status, CPUDescString, errMsg = self.hyperloadPhase2(sPort)
 
         if status is False:
             # phase 2 failure. abort.
-            prematureExit(sPort, errMsg)
+            self.prematureExit(sPort, errMsg)
         else:
             pass
         # ---- Phase 2 complete ----
@@ -480,13 +486,13 @@ class HLBackend(self):
         logging.debug("CPU Description String = %s", CPUDescString)
 
         # Prepare for phase 3
-        boardParameters = getBoardParameters(CPUDescString)
+        boardParameters = self.getBoardParameters(CPUDescString)
 
-        binArray = getBinaryFromIHex(sHexFilePath, sGenerateBinary)
+        binArray = self.getBinaryFromIHex(self.sHexFilePath, self.sGenerateBinary)
         blockSize = int(boardParameters['BlockSize'])
         totalBlocks = (len(binArray) * 1.0) / blockSize
         totalBlocks = math.ceil(totalBlocks)
-        binArray = padBinaryArray(binArray, blockSize)
+        binArray = self.padBinaryArray(binArray, blockSize)
         blockContent = bytearray(blockSize)
 
         logging.debug("Total Blocks = %f", totalBlocks)
@@ -500,7 +506,7 @@ class HLBackend(self):
 
         # ---- Hyperload Phase 3 ----
         # Sending Blocks of Binary File
-        blockCount = flash(sPort,
+        blockCount = self.flash(sPort,
                            binArray,
                            blockContent,
                            blockSize,
@@ -535,16 +541,18 @@ class HLBackend(self):
 
 def main():
 
+    gui = 0
+
     HL = HLBackend();
 
-    printIntroMessage()
+    HL.printIntroMessage()
     if len(sys.argv) > 1:
         try:
-            p, f, b, g = HL.getCommandlineArgs()
-            sDeviceFile = p
-            sHexFilePath = f
+            p, f, b, gui = HL.getCommandlineArgs()
+            HL.sDeviceFile = p
+            HL.sHexFilePath = f
             if b > 0:
-                sDeviceBaud = b  # set to user specified baud
+                HL.sDeviceBaud = b  # set to user specified baud
             else:
                 pass  # fall back to hard-coded baud rate
 
@@ -556,6 +564,10 @@ def main():
         print 'no command line switches detected: using default settings'
         pass
 
+    if gui:
+        pyFlashHyperloadGUI.MainWindow(HL).mainloop();
+    else:
+        HL.CLmode()
 
 if __name__ == "__main__":
     main()

@@ -9,10 +9,11 @@ from subprocess import Popen, PIPE
 
 class MainWindow(Frame):
 
-    def __init__(self):
+    def __init__(self,HLBackend):
 
         Frame.__init__(self)
 
+        self.BackEnd = HLBackend
         self.master.title("pyFlash Hyperload")
         self.master.config(height=800,width=300)
         #self.master.minsize(400, 200)
@@ -55,11 +56,11 @@ class MainWindow(Frame):
 
         self.selected_baudRate = StringVar(self)  # stores baud rate selection
         Label(self,text="Select Baud Rate").grid(row=5,sticky=W+N+S,padx=(10,10),pady=(10,5));
-        self.baudRate = OptionMenu(self, self.selected_baudRate,"", *pyFlashHyperloadBackend.BaudList)
+        self.baudRate = OptionMenu(self, self.selected_baudRate,"", *self.BackEnd.BaudList)
         self.baudRate.grid(sticky=E+W+N+S,row=6,columnspan=3,padx=(8,10))
 
         # set default to 38400
-        self.selected_baudRate.set(pyFlashHyperloadBackend.BaudList[3])
+        self.selected_baudRate.set(self.BackEnd.BaudList[3])
 
         ## Device Labels
         Label(self,text="Device Information",justify=CENTER,width=15).grid(row=4,sticky=E+W+N+S,column=3, columnspan=2,padx=(10,10));
