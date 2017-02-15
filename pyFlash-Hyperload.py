@@ -15,16 +15,10 @@ import serial.serialutil
 import logging
 import sys
 import getopt
+import pyFlashHyperloadGUI
 from intelhex import IntelHex
 
-###############################################################################
-# CONFIGURATION FOR pyFlash - Hyperload #######################################
-###############################################################################
-sDeviceFile = "/dev/tty.usbserial-A503JOND"   # Device File Path
-sDeviceBaud = 38400          # Suitable Device Baud Rate
-sHexFilePath = "/Users/dev/Programming_Projects/sjone-hyperload/lpc1758_freertos_GPIO.hex"
-sGenerateBinary = "y"  # "y" - Yes | "n" - No
-###############################################################################
+
 
 # LOGGING OPTIONS #######
 PYFLASH_DEBUG_LOG = "no"  # "yes" - Debug Version. "no" - Release Version
@@ -58,397 +52,509 @@ else:
 #    Bytes are types that are not mutable.
 #    Any changes done on them will cause a new alloc + concat and reassigning.
 
-# Global Defines
-
-ApplicationVersion = "1.1"
-ToolName = "pyFLASH - HYPERLOAD"
-ToolInfo = "Flashing Tool for SJOne"
-BaudList = [4800, 9600, 19200, 38400]
-ControlWordList = b'\x80\xf8\xfe\xff'
-SpecialChar = {'Dollar': '$', 'OK': '!', 'NextLine': '\n', 'STAR': '*'}
-sCPUSpeed = 48000000
-sInitialDeviceBaud = 38400
-
-ByteReference = b'\xff\x55\xaa'
 
 
-# Common Util Functions
-def printIntroMessage():
-    print "#######################"
-    print " ", ToolName
-    print ToolInfo
-    print "#######################"
-    print "Version    : ", ApplicationVersion
-    print "Build Type : ", PYFLASH_BUILD_LEVEL
-    print "#######################"
+class HLBackend:
 
-    return
+    def __init__(self):
 
+        ###############################################################################
+        # CONFIGURATION FOR pyFlash - Hyperload #######################################
+        ###############################################################################
+        self.sDeviceFile = "/dev/tty.usbserial-A503JOND"   # Device File Path
+        self.sDeviceBaud = 38400          # Suitable Device Baud Rate
+        self.sHexFilePath = "/Users/dev/Programming_Projects/sjone-hyperload/lpc1758_freertos_GPIO.hex"
+        self.sGenerateBinary = "y"  # "y" - Yes | "n" - No
+        ###############################################################################
 
-def printBytes(mymsg):
+        self.ApplicationVersion = "1.1"
+        self.ToolName = "pyFLASH - HYPERLOAD"
+        self.ToolInfo = "Flashing Tool for SJOne"
+        self.BaudList = [4800, 9600, 19200, 38400]
+        self.ControlWordList = b'\x80\xf8\xfe\xff'
+        self.SpecialChar = {'Dollar': '$', 'OK': '!', 'NextLine': '\n', 'STAR': '*'}
+        self.sCPUSpeed = 48000000
+        self.sInitialDeviceBaud = 38400
 
-    print "Type info = " + (str)(type(mymsg))
+        self.ByteReference = b'\xff\x55\xaa'
 
-    if (type(mymsg) == bytes) or (type(mymsg) == bytearray):
-        for x in mymsg:
-            print "0x" + '{:x}'.format(x),
+    # Common Util Functions
+    def printIntroMessage(self):
+        print "#######################"
+        print " ", self.ToolName
+        print self.ToolInfo
+        print "#######################"
+        print "Version    : ", self.ApplicationVersion
+        print "Build Type : ", PYFLASH_BUILD_LEVEL
+        print "#######################"
 
-        print ""
-        print "Total Elements = " + (str)(len(mymsg))
-
-    elif (type(mymsg) == str):
-        printBytes(bytearray(mymsg))
-
-    elif type(mymsg) == int:
-        print "0x" + '{:x}'.format(mymsg),
-
-    else:
-        print mymsg
-
-    return
-
-
-def getBoardParameters(descString):
-    boardParameters = {'Board': '',
-                       'BlockSize': '',
-                       'BootloaderSize': '',
-                       'FlashSize': ''}
-
-    # Parsing String to obtain required Board Parameters
-    boardParametersList = descString.split(':')
-
-    boardParameters['Board'] = boardParametersList[0]
-    boardParameters['BlockSize'] = boardParametersList[1]
-    boardParameters['BootloaderSize'] = (int(boardParametersList[2]) * 2)
-    boardParameters['FlashSize'] = boardParametersList[3]
-
-    print "\n***** Board Information ********"
-    print "Board           = {}".format(boardParameters['Board'])
-    print "Block Size      = {} B".format(boardParameters['BlockSize'])
-    print "Bootloader Size = {} B".format(boardParameters['BootloaderSize'])
-    print "Flash Size      = {} KB".format(boardParameters['FlashSize'])
-    print "*********************************\n"
-
-    return boardParameters
+        return
 
 
-def printContent(lContent):
+    def printBytes(self,mymsg):
 
-    logging.debug("--------------------")
-    count = 0
-    totalCount = 0
-    for x in lContent:
-        print '{:2x}'.format(x),
-        if count >= 10:
-            print "\n"
-            count = 0
+        print "Type info = " + (str)(type(mymsg))
+
+        if (type(mymsg) == bytes) or (type(mymsg) == bytearray):
+            for x in mymsg:
+                print "0x" + '{:x}'.format(x),
+
+            print ""
+            print "Total Elements = " + (str)(len(mymsg))
+
+        elif (type(mymsg) == str):
+            printBytes(bytearray(mymsg))
+
+        elif type(mymsg) == int:
+            print "0x" + '{:x}'.format(mymsg),
+
         else:
-            count = count + 1
-        totalCount = totalCount + 1
+            print mymsg
 
-    logging.debug("\n--------------------")
-    logging.debug("Total Count = ", totalCount)
-    logging.debug("--------------------")
-
-    return
+        return
 
 
-def getControlWord(baudRate, cpuSpeed):
-    # TODO : Currently using known values. Replace with actual formula
-    logging.debug("Retrieving Control Word")
+    def getBoardParameters(self,descString):
+        boardParameters = {'Board': '',
+                           'BlockSize': '',
+                           'BootloaderSize': '',
+                           'FlashSize': ''}
 
-    controlWord = ((cpuSpeed / (baudRate * 16)) - 1)
+        # Parsing String to obtain required Board Parameters
+        boardParametersList = descString.split(':')
 
-    return controlWord
+        boardParameters['Board'] = boardParametersList[0]
+        boardParameters['BlockSize'] = boardParametersList[1]
+        boardParameters['BootloaderSize'] = (int(boardParametersList[2]) * 2)
+        boardParameters['FlashSize'] = boardParametersList[3]
 
+        print "\n***** Board Information ********"
+        print "Board           = {}".format(boardParameters['Board'])
+        print "Block Size      = {} B".format(boardParameters['BlockSize'])
+        print "Bootloader Size = {} B".format(boardParameters['BootloaderSize'])
+        print "Flash Size      = {} KB".format(boardParameters['FlashSize'])
+        print "*********************************\n"
 
-def getPageContent(bArray, blkCount, pageSize):
-
-    # startOffset = blkCount * pageSize         # this variable is never used
-    # endOffset = (startOffset + pageSize - 1)  # this variable is never used
-
-    # print "Page Start = ", startOffset, " | Page End = ", str(endOffset)
-
-    lPageContent = bytearray(pageSize)
-    for x in range(0, pageSize):
-        lPageContent[x] = bArray[x + (blkCount * pageSize)]
-
-    # print "Length of x = ", x
-
-    if x != pageSize - 1:
-        raw_input()
-
-    return lPageContent
+        return boardParameters
 
 
-def getBinaryFromIHex(filepath, generateBin):
-    # Fetching Hex File and Storing
-    hexFile = IntelHex(filepath)
+    def printContent(self,lContent):
 
-    if generateBin == "y":
-        # Create a Binary File of this Hex File
-        binFilePath = string.replace(filepath, ".hex", ".bin")
-        logging.debug("Binary File Path : %s", binFilePath)
-        hexFile.tofile(binFilePath, format='bin')
+        logging.debug("--------------------")
+        count = 0
+        totalCount = 0
+        for x in lContent:
+            print '{:2x}'.format(x),
+            if count >= 10:
+                print "\n"
+                count = 0
+            else:
+                count = count + 1
+            totalCount = totalCount + 1
 
-    # Obtain the actual Binary content from the Hex File
-    binary = hexFile.tobinarray()
-    return binary
+        logging.debug("\n--------------------")
+        logging.debug("Total Count = ", totalCount)
+        logging.debug("--------------------")
 
-
-def padBinaryArray(binArray, blockSize):
-    paddingCount = (len(binArray) - (len(binArray)
-                    % blockSize))
-    logging.debug("Total Padding Count = %d", paddingCount)
-    # Pad 0's to binArray if required.
-    binArray = bytearray(binArray)
-    binArray += (b'\x00' * paddingCount)
-    return binArray
+        return
 
 
-def getChecksum(blocks):
+    def getControlWord(self,baudRate, cpuSpeed):
+        # TODO : Currently using known values. Replace with actual formula
+        logging.debug("Retrieving Control Word")
 
-    # Try older method - Add and Pack into integer.
-    lChecksum = bytearray(1)
-    for x in blocks:
-        lChecksum[0] = (lChecksum[0] + x) % 256
+        controlWord = ((cpuSpeed / (baudRate * 16)) - 1)
 
-    return lChecksum[0]
+        return controlWord
 
 
-# port and file are REQUIRED at minimum, otherwise a ValueError is raised
-def getCommandlineArgs():
-    # we have more arguments
-    port = ''
-    file = ''
-    baud = -1
-    try:
-        opts, args = getopt.getopt(sys.argv[1:],
-                                   "hp:f:b:",
-                                   ["port=", "file=", "baud="])
-        for opt, arg in opts:
-            if opt == '-h':
-                print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
-            elif opt in ("-p", "--port"):
-                port = arg
-                print 'got port: ' + port
-            elif opt in ("-f", "--file"):
-                file = arg
-                print 'got file: ' + file
-            elif opt in ("-b", "--baud"):
-                try:
-                    baud = int(arg)
-                except ValueError:
-                    raise ValueError('Baud rate invalid: ' + arg + 'Exiting.')
-        print port
-        print file
-        if len(port) is 0 or len(file) is 0:
-            print 'not enough arguments supplied.'
+    def getPageContent(self, bArray, blkCount, pageSize):
+
+        # startOffset = blkCount * pageSize         # this variable is never used
+        # endOffset = (startOffset + pageSize - 1)  # this variable is never used
+
+        # print "Page Start = ", startOffset, " | Page End = ", str(endOffset)
+
+        lPageContent = bytearray(pageSize)
+        for x in range(0, pageSize):
+            lPageContent[x] = bArray[x + (blkCount * pageSize)]
+
+        # print "Length of x = ", x
+
+        if x != pageSize - 1:
+            raw_input()
+
+        return lPageContent
+
+
+    def getBinaryFromIHex(self,filepath, generateBin):
+        # Fetching Hex File and Storing
+        hexFile = IntelHex(filepath)
+
+        if generateBin == "y":
+            # Create a Binary File of this Hex File
+            binFilePath = string.replace(filepath, ".hex", ".bin")
+            logging.debug("Binary File Path : %s", binFilePath)
+            hexFile.tofile(binFilePath, format='bin')
+
+        # Obtain the actual Binary content from the Hex File
+        binary = hexFile.tobinarray()
+        return binary
+
+
+    def padBinaryArray(self,binArray, blockSize):
+        paddingCount = (len(binArray) - (len(binArray)
+                        % blockSize))
+        logging.debug("Total Padding Count = %d", paddingCount)
+        # Pad 0's to binArray if required.
+        binArray = bytearray(binArray)
+        binArray += (b'\x00' * paddingCount)
+        return binArray
+
+
+    def getChecksum(self,blocks):
+
+        # Try older method - Add and Pack into integer.
+        lChecksum = bytearray(1)
+        for x in blocks:
+            lChecksum[0] = (lChecksum[0] + x) % 256
+
+        return lChecksum[0]
+
+
+    # port and file are REQUIRED at minimum, otherwise a ValueError is raised
+    def getCommandlineArgs(self):
+        # we have more arguments
+        port = ''
+        file = ''
+        baud = -1
+        gui = 0
+        try:
+            opts, args = getopt.getopt(sys.argv[1:],
+                                       "ghp:f:b:",
+                                       ["port=", "file=", "baud="])
+            for opt, arg in opts:
+                if opt == '-h':
+                    print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
+                elif opt in ("-g","--gui"):
+                    gui = 1
+                elif opt in ("-p", "--port"):
+                    port = arg
+                    print 'got port: ' + port
+                elif opt in ("-f", "--file"):
+                    file = arg
+                    print 'got file: ' + file
+                elif opt in ("-b", "--baud"):
+                    try:
+                        baud = int(arg)
+                    except ValueError:
+                        raise ValueError('Baud rate invalid: ' + arg + 'Exiting.')
+            print port
+            print file
+            if not gui:
+                if len(port) is 0 or len(file) is 0:
+                    print 'not enough arguments supplied.'
+                    # print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
+                    raise ValueError('GetoptError detected')
+                    # sys.exit(2)
+                else:
+                    return (port, file, baud, gui)
+                    # self.sHexFilePath = file
+                    # self.sDeviceFile = port
+            else:
+                return (port, file, baud, gui)
+        except getopt.GetoptError:
+            print 'getopt error'
             # print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
             raise ValueError('GetoptError detected')
+            return file, port
             # sys.exit(2)
-        else:
-            return (port, file, baud)
-            # sHexFilePath = file
-            # sDeviceFile = port
-    except getopt.GetoptError:
-        print 'getopt error'
-        # print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
-        raise ValueError('GetoptError detected')
-        return file, port
-        # sys.exit(2)
-# Class
+    # Class
 
 
-# params binArray, blockContent, blockSize, blockCount, totalBlocks
-def flash(sPort, binArray, blockContent,
-          blockSize, totalBlocks, sendDummy=False):
-    blockCount = 0
-    while blockCount < totalBlocks:
-        print "--------------------"
-        blockCountPacked = struct.pack('<H', blockCount)
+    # params binArray, blockContent, blockSize, blockCount, totalBlocks
+    def flash(self,sPort, binArray, blockContent,
+              blockSize, totalBlocks, sendDummy=False):
+        blockCount = 0
+        while blockCount < totalBlocks:
+            print "--------------------"
+            blockCountPacked = struct.pack('<H', blockCount)
 
-        msg = sPort.write(blockCountPacked[1])
-        if msg != 1:
-            logging.error("Error in Sending BlockCountLowAddr")
+            msg = sPort.write(blockCountPacked[1])
+            if msg != 1:
+                logging.error("Error in Sending BlockCountLowAddr")
 
-        msg = sPort.write(blockCountPacked[0])
-        if msg != 1:
-            logging.error("Error in Sending BlockCountHiAddr")
+            msg = sPort.write(blockCountPacked[0])
+            if msg != 1:
+                logging.error("Error in Sending BlockCountHiAddr")
 
-        logging.debug("BlockCounts = %d", blockCount)
+            logging.debug("BlockCounts = %d", blockCount)
 
-        if sendDummy is False:
-            blockContent = getPageContent(binArray, blockCount, blockSize)
+            if sendDummy is False:
+                blockContent = self.getPageContent(binArray, blockCount, blockSize)
 
-        msg = sPort.write(blockContent)
-        if msg != len(blockContent):
-            logging.error("Error - Failed to sending Data Block Content")
-            break
+            msg = sPort.write(blockContent)
+            if msg != len(blockContent):
+                logging.error("Error - Failed to sending Data Block Content")
+                break
 
-        # printContent(blockContent)
+            # printContent(blockContent)
 
-        checksum = bytearray(1)
+            checksum = bytearray(1)
 
-        checksum[0] = getChecksum(blockContent)
+            checksum[0] = self.getChecksum(blockContent)
 
-        logging.debug("Checksum = %d[0x%x]", checksum[0], checksum[0])
+            logging.debug("Checksum = %d[0x%x]", checksum[0], checksum[0])
 
-        msg = sPort.write(checksum)
-        logging.debug("Size of Block Written = %d", msg)
+            msg = sPort.write(checksum)
+            logging.debug("Size of Block Written = %d", msg)
 
-        if msg != 1:
-            logging.error("Error - Failed to send Entire Data Block")
+            if msg != 1:
+                logging.error("Error - Failed to send Entire Data Block")
 
-        msg = sPort.read(1)
-        if msg != SpecialChar['OK']:
-            logging.error(
-                "Failed to Receive Ack.. Retrying #{}".format(blockCount))
-        else:
-            print "Block # " + str(blockCount) + " flashed!"
-            blockCount = blockCount + 1
-
-        print "--------------------"
-    return blockCount
-
-
-def prematureExit(serialport, message):
-    logging.error("{}. Exiting...".format(message))
-    serialport.baudrate = sInitialDeviceBaud
-    serialport.close()
-    sys.exit(2)
-
-
-def getHandshakeStatus(sp, handshakeBytes):
-    """
-    handshakeBytes expects the handshake
-     protocol bytes in alternating order
-
-    read, write, read, write, read (must end on a read)
-    """
-    # reset SJOne board
-    sp.rts = False
-    sp.dtr = False
-
-    # read from SJOne for bootloader signal
-    msg = sp.read(1)
-
-    if msg is handshakeBytes[0]:
-        # SJOne bootloader is active, begin handshake
-        # skip the first handshake since it's done now
-        for i in xrange(1, len(handshakeBytes) - 1):
-
-            # send and read next handshake protocol
-            sp.write(handshakeBytes[i])
-            msg = sp.read(1)
-
-            if msg is handshakeBytes[i + 1]:
-                print 'Handshake {} received'.format(i)
+            msg = sPort.read(1)
+            if msg != self.SpecialChar['OK']:
+                logging.error(
+                    "Failed to Receive Ack.. Retrying #{}".format(blockCount))
             else:
-                print 'Handshake {} timed out'.format(i)
-                return False
-        return True
-    else:
-        return False
+                print "Block # " + str(blockCount) + " flashed!"
+                blockCount = blockCount + 1
+
+            print "--------------------"
+        return blockCount
 
 
-def setBoardBaud(sp, baud, cpuSpeed):
-    lControlWordInteger = getControlWord(baud, cpuSpeed)
-    lControlWordPacked = struct.pack('<i', lControlWordInteger)
+    def prematureExit(self,serialport, message):
+        logging.error("{}. Exiting...".format(message))
+        serialport.baudrate = self.sInitialDeviceBaud
+        serialport.close()
+        sys.exit(2)
 
-    bytesWritten = sp.write(lControlWordPacked)
 
-    if bytesWritten == len(lControlWordPacked):
+    def getHandshakeStatus(self,sp, handshakeBytes):
+        """
+        handshakeBytes expects the handshake
+         protocol bytes in alternating order
+
+        read, write, read, write, read (must end on a read)
+        """
+        # reset SJOne board
+        sp.rts = False
+        sp.dtr = False
+
+        # read from SJOne for bootloader signal
         msg = sp.read(1)
-        if msg != lControlWordPacked[0]:
-            print "Error: Failed to receive control word ACK"
-            return False
-        else:
-            print "Success: board set to {} baud.".format(baud)
+
+        if msg is handshakeBytes[0]:
+            # SJOne bootloader is active, begin handshake
+            # skip the first handshake since it's done now
+            for i in xrange(1, len(handshakeBytes) - 1):
+
+                # send and read next handshake protocol
+                sp.write(handshakeBytes[i])
+                msg = sp.read(1)
+
+                if msg is handshakeBytes[i + 1]:
+                    print 'Handshake {} received'.format(i)
+                else:
+                    print 'Handshake {} timed out'.format(i)
+                    return False
             return True
-    else:
-        print 'Error: control word not sent successfully'
-        return False
-
-
-def getCpuDescription(sp):
-    """ Phase 2.1 Should be called immediately after setting the board baud rate.
-        Example CPU description: "$LPC1758:4096:2048:512\n"
-    """
-    print 'Getting CPU description'
-    msg = sp.read(1)
-
-    if msg is SpecialChar['Dollar']:
-        # begin building CPU description string
-        CPUDescString = SpecialChar['Dollar']
-        while True:
-            msg = sp.read(1)
-            if msg == SpecialChar['NextLine']:
-                return CPUDescString
-            else:
-                CPUDescString = CPUDescString + msg
-    else:
-        return ""
-
-
-def hyperloadPhase1(sp, baud):
-    """
-    Args:
-        sp   (Serial) : serial port to communicate with the SJOne board
-        baud (int)    : desired baud rate to program the board at
-    Returns:
-        (success, errMsg): is a tuple
-    Raises:
-
-    """
-
-    # Protocol Phase 1
-    if getHandshakeStatus(sp, ByteReference) is False:
-        return (False, "Phase 1 Error: Handshake failure.")
-
-    if setBoardBaud(sp, baud, sCPUSpeed) is False:
-        return (False, "Phase 1 Error: Setting board baud rate failure.")
-
-    if baud != sInitialDeviceBaud:
-        # Switch to new BaudRate here.
-        logging.debug("Requested Baudrate different from Default. \
-                       Changing Baudrate..")
-        sp.baudrate = baud
-    else:
-        logging.debug("BaudRate same as Default")
-
-    return (True, "Phase 1 complete")
-
-
-def hyperloadPhase2(sp):
-    # Protocol Phase 2
-    descr = getCpuDescription(sp)
-    if len(descr) > 0:
-        msg = sp.read(1)  # check for OK response from SJOne
-        if msg != SpecialChar['OK']:
-            logging.error("Phase 2 Error: Failed to receive OK")
-            return (False, "", "Phase 2 Error: Failed to receive OK")
         else:
-            logging.debug("Phase 2 complete")
-            return (True, descr, "Phase 2 complete")
-    else:
-        return (False, descr, "Phase 2 Error: Failed to get CPU description")
+            return False
 
 
-# Main Program ###
+    def setBoardBaud(self,sp, baud, cpuSpeed):
+        lControlWordInteger = self.getControlWord(baud, cpuSpeed)
+        lControlWordPacked = struct.pack('<i', lControlWordInteger)
+
+        bytesWritten = sp.write(lControlWordPacked)
+
+        if bytesWritten == len(lControlWordPacked):
+            msg = sp.read(1)
+            if msg != lControlWordPacked[0]:
+                print "Error: Failed to receive control word ACK"
+                return False
+            else:
+                print "Success: board set to {} baud.".format(baud)
+                return True
+        else:
+            print 'Error: control word not sent successfully'
+            return False
+
+
+    def getCpuDescription(self,sp):
+        """ Phase 2.1 Should be called immediately after setting the board baud rate.
+            Example CPU description: "$LPC1758:4096:2048:512\n"
+        """
+        print 'Getting CPU description'
+        msg = sp.read(1)
+
+        if msg is self.SpecialChar['Dollar']:
+            # begin building CPU description string
+            CPUDescString = self.SpecialChar['Dollar']
+            while True:
+                msg = sp.read(1)
+                if msg == self.SpecialChar['NextLine']:
+                    return CPUDescString
+                else:
+                    CPUDescString = CPUDescString + msg
+        else:
+            return ""
+
+
+    def hyperloadPhase1(self,sp, baud):
+        """
+        Args:
+            sp   (Serial) : serial port to communicate with the SJOne board
+            baud (int)    : desired baud rate to program the board at
+        Returns:
+            (success, errMsg): is a tuple
+        Raises:
+
+        """
+
+        # Protocol Phase 1
+        if self.getHandshakeStatus(sp, self.ByteReference) is False:
+            return (False, "Phase 1 Error: Handshake failure.")
+
+        if self.setBoardBaud(sp, baud, self.sCPUSpeed) is False:
+            return (False, "Phase 1 Error: Setting board baud rate failure.")
+
+        if baud != self.sInitialDeviceBaud:
+            # Switch to new BaudRate here.
+            logging.debug("Requested Baudrate different from Default. \
+                           Changing Baudrate..")
+            sp.baudrate = baud
+        else:
+            logging.debug("BaudRate same as Default")
+
+        return (True, "Phase 1 complete")
+
+
+    def hyperloadPhase2(self,sp):
+        # Protocol Phase 2
+        descr = self.getCpuDescription(sp)
+        if len(descr) > 0:
+            msg = sp.read(1)  # check for OK response from SJOne
+            if msg != self.SpecialChar['OK']:
+                logging.error("Phase 2 Error: Failed to receive OK")
+                return (False, "", "Phase 2 Error: Failed to receive OK")
+            else:
+                logging.debug("Phase 2 complete")
+                return (True, descr, "Phase 2 complete")
+        else:
+            return (False, descr, "Phase 2 Error: Failed to get CPU description")
+
+    def configureSerial(self):
+        self.sPort = serial.Serial(port=self.sDeviceFile,
+                              baudrate=self.sInitialDeviceBaud,
+                              parity=serial.PARITY_NONE,
+                              stopbits=serial.STOPBITS_ONE,
+                              bytesize=serial.EIGHTBITS)
+
+        self.sPort.reset_input_buffer()
+        self.sPort.reset_output_buffer()
+        self.sPort.flush()
+
+    def CLmode(self):
+
+        print str('-' * (len(self.sHexFilePath) + 20))
+        print "Hex File Path = \"" + self.sHexFilePath + "\""
+        print str('-' * (len(self.sHexFilePath) + 20))
+
+        configureSerial()
+
+        # ---- Hyperload Phase 1 ----
+        status, errMsg = self.hyperloadPhase1(self.sPort, self.sDeviceBaud)
+
+        if status is False:
+            # failure. don't flash
+            self.prematureExit(self.sPort, errMsg)
+        else:
+            pass
+        # ---- Phase 1 complete ----
+
+        # ---- Hyperload Phase 2 ----
+        status, CPUDescString, errMsg = self.hyperloadPhase2(self.sPort)
+
+        if status is False:
+            # phase 2 failure. abort.
+            self.prematureExit(self.sPort, errMsg)
+        else:
+            pass
+        # ---- Phase 2 complete ----
+
+        logging.debug("CPU Description String = %s", CPUDescString)
+
+        # Prepare for phase 3
+        boardParameters = self.getBoardParameters(CPUDescString)
+
+        binArray = self.getBinaryFromIHex(self.sHexFilePath, self.sGenerateBinary)
+        blockSize = int(boardParameters['BlockSize'])
+        totalBlocks = (len(binArray) * 1.0) / blockSize
+        totalBlocks = math.ceil(totalBlocks)
+        binArray = self.padBinaryArray(binArray, blockSize)
+        blockContent = bytearray(blockSize)
+
+        logging.debug("Total Blocks = %f", totalBlocks)
+        print "Total # of Blocks to be Flashed = ", totalBlocks
+
+        # Send Dummy Blocks -
+        # Update : We can send the actual blocks itself.
+        sendDummy = False
+        if sendDummy is True:
+            logging.debug("FLASHING EMPTY BLOCKS")
+
+        # ---- Hyperload Phase 3 ----
+        # Sending Blocks of Binary File
+        blockCount = self.flash(sPort,
+                           binArray,
+                           blockContent,
+                           blockSize,
+                           totalBlocks,
+                           sendDummy)
+        if blockCount != totalBlocks:
+            logging.error("Error - All Blocks not Flashed")
+            logging.error("Total = {}".format(totalBlocks))
+            logging.error("# of Blocks Flashed = {}"
+                          .format(blockCount))
+        else:
+            print "Flashing Successful!"
+            endTxPacked = bytearray(2)
+            endTxPacked[0] = 0xFF
+            endTxPacked[1] = 0xFF
+
+            msg = sPort.write(bytearray(endTxPacked))
+
+            if msg != 2:
+                logging.error("Error Sending \
+                    End Of Transaction Signal")
+
+            msg = sPort.read(1)
+            logging.debug("Received Ack = " + str(msg))
+
+            if msg != self.SpecialChar['STAR']:
+                logging.error("Error - Final Ack Not Received")
+        # ---- Phase 3 Complete ----
+
+        sPort.baudrate = self.sInitialDeviceBaud
+        sPort.close()
+
 def main():
-    global sDeviceFile
-    global sHexFilePath
-    global sDeviceBaud
-    global sGenerateBinary
-    printIntroMessage()
+
+    gui = 0
+
+    HL = HLBackend();
+
+    HL.printIntroMessage()
     if len(sys.argv) > 1:
         try:
-            p, f, b = getCommandlineArgs()
-            sDeviceFile = p
-            sHexFilePath = f
+            p, f, b, gui = HL.getCommandlineArgs()
+            HL.sDeviceFile = p
+            HL.sHexFilePath = f
             if b > 0:
-                sDeviceBaud = b  # set to user specified baud
+                HL.sDeviceBaud = b  # set to user specified baud
             else:
                 pass  # fall back to hard-coded baud rate
 
@@ -460,96 +566,10 @@ def main():
         print 'no command line switches detected: using default settings'
         pass
 
-    print str('-' * (len(sHexFilePath) + 20))
-    print "Hex File Path = \"" + sHexFilePath + "\""
-    print str('-' * (len(sHexFilePath) + 20))
-
-    sPort = serial.Serial(port=sDeviceFile,
-                          baudrate=sInitialDeviceBaud,
-                          parity=serial.PARITY_NONE,
-                          stopbits=serial.STOPBITS_ONE,
-                          bytesize=serial.EIGHTBITS)
-
-    sPort.reset_input_buffer()
-    sPort.reset_output_buffer()
-    sPort.flush()
-
-    # ---- Hyperload Phase 1 ----
-    status, errMsg = hyperloadPhase1(sPort, sDeviceBaud)
-
-    if status is False:
-        # failure. don't flash
-        prematureExit(sPort, errMsg)
+    if gui:
+        pyFlashHyperloadGUI.MainWindow(HL).mainloop();
     else:
-        pass
-    # ---- Phase 1 complete ----
-
-    # ---- Hyperload Phase 2 ----
-    status, CPUDescString, errMsg = hyperloadPhase2(sPort)
-
-    if status is False:
-        # phase 2 failure. abort.
-        prematureExit(sPort, errMsg)
-    else:
-        pass
-    # ---- Phase 2 complete ----
-
-    logging.debug("CPU Description String = %s", CPUDescString)
-
-    # Prepare for phase 3
-    boardParameters = getBoardParameters(CPUDescString)
-
-    binArray = getBinaryFromIHex(sHexFilePath, sGenerateBinary)
-    blockSize = int(boardParameters['BlockSize'])
-    totalBlocks = (len(binArray) * 1.0) / blockSize
-    totalBlocks = math.ceil(totalBlocks)
-    binArray = padBinaryArray(binArray, blockSize)
-    blockContent = bytearray(blockSize)
-
-    logging.debug("Total Blocks = %f", totalBlocks)
-    print "Total # of Blocks to be Flashed = ", totalBlocks
-
-    # Send Dummy Blocks -
-    # Update : We can send the actual blocks itself.
-    sendDummy = False
-    if sendDummy is True:
-        logging.debug("FLASHING EMPTY BLOCKS")
-
-    # ---- Hyperload Phase 3 ----
-    # Sending Blocks of Binary File
-    blockCount = flash(sPort,
-                       binArray,
-                       blockContent,
-                       blockSize,
-                       totalBlocks,
-                       sendDummy)
-    if blockCount != totalBlocks:
-        logging.error("Error - All Blocks not Flashed")
-        logging.error("Total = {}".format(totalBlocks))
-        logging.error("# of Blocks Flashed = {}"
-                      .format(blockCount))
-    else:
-        print "Flashing Successful!"
-        endTxPacked = bytearray(2)
-        endTxPacked[0] = 0xFF
-        endTxPacked[1] = 0xFF
-
-        msg = sPort.write(bytearray(endTxPacked))
-
-        if msg != 2:
-            logging.error("Error Sending \
-                End Of Transaction Signal")
-
-        msg = sPort.read(1)
-        logging.debug("Received Ack = " + str(msg))
-
-        if msg != SpecialChar['STAR']:
-            logging.error("Error - Final Ack Not Received")
-    # ---- Phase 3 Complete ----
-
-    sPort.baudrate = sInitialDeviceBaud
-    sPort.close()
-
+        HL.CLmode()
 
 if __name__ == "__main__":
     main()
