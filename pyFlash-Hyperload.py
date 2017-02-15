@@ -20,9 +20,9 @@ from intelhex import IntelHex
 ###############################################################################
 # CONFIGURATION FOR pyFlash - Hyperload #######################################
 ###############################################################################
-sDeviceFile = "/dev/tty.usbserial-A503JOHW"   # Device File Path
-sDeviceBaud = 1000000          # Suitable Device Baud Rate
-sHexFilePath = "/Users/atkvo/Workspace/eclipse/test/Debug/test.hex"
+sDeviceFile = "/dev/tty.usbserial-A503JOND"   # Device File Path
+sDeviceBaud = 38400          # Suitable Device Baud Rate
+sHexFilePath = "/Users/dev/Programming_Projects/sjone-hyperload/lpc1758_freertos_GPIO.hex"
 sGenerateBinary = "y"  # "y" - Yes | "n" - No
 ###############################################################################
 
@@ -397,7 +397,7 @@ def hyperloadPhase1(sp, baud):
         sp   (Serial) : serial port to communicate with the SJOne board
         baud (int)    : desired baud rate to program the board at
     Returns:
-        (success, errMsg): is a tuple 
+        (success, errMsg): is a tuple
     Raises:
 
     """
