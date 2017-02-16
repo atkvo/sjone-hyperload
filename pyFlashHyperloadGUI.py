@@ -83,12 +83,18 @@ class MainWindow(Frame):
     def commit_parameters(self):
         if(self.selected_device.get() != ""):
             self.BackEnd.setPort(self.selected_device.get())
-
+        else:
+            return False
         if(self.selected_baudRate.get() != ""):
             self.BackEnd.setFlashBaudRate(self.selected_baudRate.get())
-
+        else:
+            return False
         if(self.hex_filepath.get() != ""):
             self.BackEnd.setFilePath(self.hex_filepath.get())
+        else:
+            return False
+        return True
+
 
     def set_deviceInfo(self):
         self.l_board.config(text=self.BackEnd.boardParameters['Board'])
@@ -107,7 +113,13 @@ class MainWindow(Frame):
         self.hex_filepath.set("")
 
     def b_flash(self):
-        self.BackEnd.flashPhase(self.updateProgress)
+        if (self.commit_parameters()):
+            self.BackEnd.configureSerial()
+            self.BackEnd.preFlashPhases()
+            self.set_deviceInfo()
+            self.BackEnd.flashPhase(self.updateProgress)
+        else:
+            print "Unable to Commit: Not Enough Parameters Selected"
 
     def updateProgress(self, progressValue):
         self.progvar.set(progressValue)
