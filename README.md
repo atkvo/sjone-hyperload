@@ -46,9 +46,11 @@ Example:
 - [ ] Create ~/.pyFlash and store last used options for flashing
 - [ ] Handle exceptions
 - [ ] Ensure packing is done based on Endianness
-- [ ] Rewrite program with classes using this as the backbone
-- [ ] Incorporate design decisions keeping GUI in mind
+- [x] Rewrite program with classes using this as the backbone
+- [x] Incorporate design decisions keeping GUI in mind
 - [ ] Add code comments
+- [ ] Restructure flashing methods to be "phase 1/2/3" as defined in Hyperload protocol
+- [ ] Thread GUI to keep app responsive during flash
 
 ### Issues Faced
 1. Handling Bytes were hard - Use bytearray for most of the IO related functions. Difference between bytes and bytearray is that the latter is mutable. 
