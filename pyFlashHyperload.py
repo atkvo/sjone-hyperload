@@ -59,7 +59,7 @@ class HLBackend:
         # CONFIGURATION FOR pyFlash - Hyperload #######################################
         ###############################################################################
         self.sDeviceFile = "/dev/tty.usbserial-A503JOND"   # Device File Path
-        self.sDeviceBaud = 1000000  # default PROGRAMMING baud rate
+        self.flashBaudRate = 1000000  # default PROGRAMMING baud rate
         self.sHexFilePath = "/Users/dev/Programming_Projects/sjone-hyperload/lpc1758_freertos_GPIO.hex"
         self.sGenerateBinary = "y"  # "y" - Yes | "n" - No
         ###############################################################################
@@ -450,7 +450,7 @@ class HLBackend:
         self.sPort.close()
 
     def setFlashBaudRate(self, baudrate):
-        self.sDeviceBaud = int(baudrate)
+        self.flashBaudRate = int(baudrate)
 
     def setPort(self, portString):
         self.sDeviceFile = portString
@@ -460,7 +460,7 @@ class HLBackend:
 
     def preFlashPhases(self):
         # ---- Hyperload Phase 1 ----
-        status, errMsg = self.hyperloadPhase1(self.sPort, self.sDeviceBaud)
+        status, errMsg = self.hyperloadPhase1(self.sPort, self.flashBaudRate)
 
         if status is False:
             # failure. don't flash
