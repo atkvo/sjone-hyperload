@@ -87,7 +87,6 @@ class HLBackend:
 
         return
 
-
     def printBytes(self, mymsg):
 
         print "Type info = " + (str)(type(mymsg))
@@ -110,8 +109,7 @@ class HLBackend:
 
         return
 
-
-    def getBoardParameters(self,descString):
+    def getBoardParameters(self, descString):
         boardParameters = {'Board': '',
                            'BlockSize': '',
                            'BootloaderSize': '',
@@ -134,8 +132,7 @@ class HLBackend:
 
         return boardParameters
 
-
-    def printContent(self,lContent):
+    def printContent(self, lContent):
 
         logging.debug("--------------------")
         count = 0
@@ -152,18 +149,15 @@ class HLBackend:
         logging.debug("\n--------------------")
         logging.debug("Total Count = ", totalCount)
         logging.debug("--------------------")
-
         return
 
-
-    def getControlWord(self,baudRate, cpuSpeed):
+    def getControlWord(self, baudRate, cpuSpeed):
         # TODO : Currently using known values. Replace with actual formula
         logging.debug("Retrieving Control Word")
 
         controlWord = ((cpuSpeed / (baudRate * 16)) - 1)
 
         return controlWord
-
 
     def getPageContent(self, bArray, blkCount, pageSize):
 
@@ -183,8 +177,7 @@ class HLBackend:
 
         return lPageContent
 
-
-    def getBinaryFromIHex(self,filepath, generateBin):
+    def getBinaryFromIHex(self, filepath, generateBin):
         # Fetching Hex File and Storing
         hexFile = IntelHex(filepath)
 
@@ -198,8 +191,7 @@ class HLBackend:
         binary = hexFile.tobinarray()
         return binary
 
-
-    def padBinaryArray(self,binArray, blockSize):
+    def padBinaryArray(self, binArray, blockSize):
         paddingCount = (len(binArray) - (len(binArray)
                         % blockSize))
         logging.debug("Total Padding Count = %d", paddingCount)
@@ -208,8 +200,7 @@ class HLBackend:
         binArray += (b'\x00' * paddingCount)
         return binArray
 
-
-    def getChecksum(self,blocks):
+    def getChecksum(self, blocks):
 
         # Try older method - Add and Pack into integer.
         lChecksum = bytearray(1)
@@ -217,7 +208,6 @@ class HLBackend:
             lChecksum[0] = (lChecksum[0] + x) % 256
 
         return lChecksum[0]
-
 
     # port and file are REQUIRED at minimum, otherwise a ValueError is raised
     def getCommandlineArgs(self):
@@ -233,7 +223,7 @@ class HLBackend:
             for opt, arg in opts:
                 if opt == '-h':
                     print 'usage: ' + sys.argv[0] + ' -p port -f hexfile'
-                elif opt in ("-g","--gui"):
+                elif opt in ("-g", "--gui"):
                     gui = 1
                 elif opt in ("-p", "--port"):
                     port = arg
@@ -268,15 +258,13 @@ class HLBackend:
             # sys.exit(2)
     # Class
 
-
-    # params binArray, blockContent, blockSize, blockCount, totalBlocks
-    def flash(self,sPort, binArray, blockContent,
-              blockSize, totalBlocks, sendDummy=False,callback = lambda *_, **__: None):
+    def flash(self, sPort, binArray, blockContent,
+              blockSize, totalBlocks, sendDummy=False, callback=lambda *_, **__: None):
         blockCount = 0
         while blockCount < totalBlocks:
             print "totalBlocks: " + str(totalBlocks)
             print "blockCount: " + str(blockCount)
-            callback(int( blockCount / totalBlocks  * 100))
+            callback(int(blockCount / totalBlocks * 100))
             print "--------------------"
             blockCountPacked = struct.pack('<H', blockCount)
 
@@ -322,19 +310,17 @@ class HLBackend:
 
             print "--------------------"
 
-        callback(int( blockCount / totalBlocks  * 100))
+        callback(int(blockCount / totalBlocks * 100))
 
         return blockCount
 
-
-    def prematureExit(self,serialport, message):
+    def prematureExit(self, serialport, message):
         logging.error("{}. Exiting...".format(message))
         serialport.baudrate = self.sInitialDeviceBaud
         serialport.close()
         sys.exit(2)
 
-
-    def getHandshakeStatus(self,sp, handshakeBytes):
+    def getHandshakeStatus(self, sp, handshakeBytes):
         """
         handshakeBytes expects the handshake
          protocol bytes in alternating order
@@ -366,8 +352,7 @@ class HLBackend:
         else:
             return False
 
-
-    def setBoardBaud(self,sp, baud, cpuSpeed):
+    def setBoardBaud(self, sp, baud, cpuSpeed):
         lControlWordInteger = self.getControlWord(baud, cpuSpeed)
         lControlWordPacked = struct.pack('<i', lControlWordInteger)
 
@@ -385,8 +370,7 @@ class HLBackend:
             print 'Error: control word not sent successfully'
             return False
 
-
-    def getCpuDescription(self,sp):
+    def getCpuDescription(self, sp):
         """ Phase 2.1 Should be called immediately after setting the board baud rate.
             Example CPU description: "$LPC1758:4096:2048:512\n"
         """
@@ -405,8 +389,7 @@ class HLBackend:
         else:
             return ""
 
-
-    def hyperloadPhase1(self,sp, baud):
+    def hyperloadPhase1(self, sp, baud):
         """
         Args:
             sp   (Serial) : serial port to communicate with the SJOne board
@@ -434,8 +417,7 @@ class HLBackend:
 
         return (True, "Phase 1 complete")
 
-
-    def hyperloadPhase2(self,sp):
+    def hyperloadPhase2(self, sp):
         # Protocol Phase 2
         descr = self.getCpuDescription(sp)
         if len(descr) > 0:
@@ -451,10 +433,10 @@ class HLBackend:
 
     def configureSerial(self):
         self.sPort = serial.Serial(port=self.sDeviceFile,
-                              baudrate=self.sInitialDeviceBaud,
-                              parity=serial.PARITY_NONE,
-                              stopbits=serial.STOPBITS_ONE,
-                              bytesize=serial.EIGHTBITS)
+                                   baudrate=self.sInitialDeviceBaud,
+                                   parity=serial.PARITY_NONE,
+                                   stopbits=serial.STOPBITS_ONE,
+                                   bytesize=serial.EIGHTBITS)
 
         self.sPort.reset_input_buffer()
         self.sPort.reset_output_buffer()
@@ -464,15 +446,14 @@ class HLBackend:
         self.sPort.baudrate = self.sInitialDeviceBaud
         self.sPort.close()
 
-    def setBaudRate(self,baudrate):
+    def setBaudRate(self, baudrate):
         self.sDeviceBaud = int(baudrate)
 
-    def setPort(self,portString):
+    def setPort(self, portString):
         self.sDeviceFile = portString
 
-    def setFilePath(self,filepath):
+    def setFilePath(self, filepath):
         self.sHexFilePath = filepath
-
 
     def preFlashPhases(self):
         # ---- Hyperload Phase 1 ----
@@ -510,9 +491,7 @@ class HLBackend:
         logging.debug("Total Blocks = %f", self.totalBlocks)
         print "Total # of Blocks to be Flashed = ", self.totalBlocks
 
-
-
-    def flashPhase(self,callback = lambda *_, **__: None):
+    def flashPhase(self, callback=lambda *_, **__: None):
 
         # Send Dummy Blocks -
         # Update : We can send the actual blocks itself.
@@ -522,12 +501,12 @@ class HLBackend:
         # ---- Hyperload Phase 3 ----
         # Sending Blocks of Binary File
         self.blockCount = self.flash(self.sPort,
-                           self.binArray,
-                           self.blockContent,
-                           self.blockSize,
-                           self.totalBlocks,
-                           sendDummy,
-                           callback)
+                                     self.binArray,
+                                     self.blockContent,
+                                     self.blockSize,
+                                     self.totalBlocks,
+                                     sendDummy,
+                                     callback)
         if self.blockCount != self.totalBlocks:
             logging.error("Error - All Blocks not Flashed")
             logging.error("Total = {}".format(self.totalBlocks))
@@ -563,11 +542,11 @@ class HLBackend:
         self.flashPhase()
         self.closeSerial()
 
-def main():
 
+def main():
     gui = 0
 
-    HL = HLBackend();
+    HL = HLBackend()
 
     HL.printIntroMessage()
     if len(sys.argv) > 1:
@@ -589,9 +568,10 @@ def main():
         pass
 
     if gui:
-        pyFlashHyperloadGUI.MainWindow(HL).mainloop();
+        pyFlashHyperloadGUI.MainWindow(HL).mainloop()
     else:
         HL.CLmode()
+
 
 if __name__ == "__main__":
     main()
