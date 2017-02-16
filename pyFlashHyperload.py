@@ -531,7 +531,7 @@ class HLBackend:
                 logging.error("Error - Final Ack Not Received")
         # ---- Phase 3 Complete ----
 
-    def CLmode(self):
+    def RunHyperloadProtocol(self):
 
         print str('-' * (len(self.sHexFilePath) + 20))
         print "Hex File Path = \"" + self.sHexFilePath + "\""
@@ -570,7 +570,7 @@ def main():
     if gui:
         pyFlashHyperloadGUI.MainWindow(HL).mainloop()
     else:
-        HL.CLmode()
+        HL.RunHyperloadProtocol()
 
 
 if __name__ == "__main__":
