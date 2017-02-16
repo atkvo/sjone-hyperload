@@ -1,5 +1,5 @@
 # pyFlash-Hyperload
-Version : 1.1
+Version : 2.0
 
 ## About the Tool:
 A firmware flashing tool for SJOne using Python. This is based on the 'Hyperload' Protocol for flashing images at high speeds.
