@@ -25,8 +25,8 @@ class MainWindow(Frame):
         self.tbox_hex_filepath.grid(row=1, column=0, sticky=E + W + N + S, padx=(10, 10), pady=(10, 10), columnspan=3)
 
         Button(self, text='Open', command=self.b_open).grid(row=1, column=3, padx=(10, 10), pady=(10, 10), sticky=E + W + N + S)
-        Button(self, text='Clear', command=self.progmove).grid(row=1, column=4, padx=(10, 10), pady=(10, 10), sticky=E + W + N + S)
-        Button(self, text='Flash', command=self.flash).grid(row=2, column=3, columnspan=2, padx=(10, 10), pady=(10, 10), sticky=E + W + N + S)
+        Button(self, text='Clear', command=self.b_clear).grid(row=1, column=4, padx=(10, 10), pady=(10, 10), sticky=E + W + N + S)
+        Button(self, text='Flash', command=self.b_flash).grid(row=2, column=3, columnspan=2, padx=(10, 10), pady=(10, 10), sticky=E + W + N + S)
 
         pbar_style = ttk.Style()
         pbar_style.theme_use('default')
@@ -95,22 +95,18 @@ class MainWindow(Frame):
         self.l_block.config(text=self.BackEnd.boardParameters['BlockSize'])
         self.l_bootloader.config(text=self.BackEnd.boardParameters['BootloaderSize'])
         self.l_flash.config(text=self.BackEnd.boardParameters['FlashSize'])
-        # {'BootloaderSize': 65536, 'BlockSize': '4096', 'FlashSize': '512', 'Board': '$LPC1758'}
 
     def b_open(self):
         self.hex_filepath.set(tkFileDialog.askopenfilename())
-        print self.hex_filepath.get()
         self.commit_parameters()
         self.BackEnd.configureSerial()
         self.BackEnd.preFlashPhases()
-        print self.BackEnd.boardParameters
         self.set_deviceInfo()
 
-    def progmove(self):
-        self.progvar.set(self.progvar.get() + 1)
-        print("it works")
+    def b_clear(self):
+        self.hex_filepath.set("")
 
-    def flash(self):
+    def b_flash(self):
         self.BackEnd.flashPhase(self.updateProgress)
 
     def updateProgress(self, progressValue):
