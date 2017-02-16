@@ -18,8 +18,6 @@ import getopt
 import pyFlashHyperloadGUI
 from intelhex import IntelHex
 
-
-
 # LOGGING OPTIONS #######
 PYFLASH_DEBUG_LOG = "no"  # "yes" - Debug Version. "no" - Release Version
 #########################
@@ -53,7 +51,6 @@ else:
 #    Any changes done on them will cause a new alloc + concat and reassigning.
 
 
-
 class HLBackend:
 
     def __init__(self):
@@ -62,7 +59,7 @@ class HLBackend:
         # CONFIGURATION FOR pyFlash - Hyperload #######################################
         ###############################################################################
         self.sDeviceFile = "/dev/tty.usbserial-A503JOND"   # Device File Path
-        self.sDeviceBaud = 38400          # Suitable Device Baud Rate
+        self.sDeviceBaud = 1000000  # default PROGRAMMING baud rate
         self.sHexFilePath = "/Users/dev/Programming_Projects/sjone-hyperload/lpc1758_freertos_GPIO.hex"
         self.sGenerateBinary = "y"  # "y" - Yes | "n" - No
         ###############################################################################
@@ -91,7 +88,7 @@ class HLBackend:
         return
 
 
-    def printBytes(self,mymsg):
+    def printBytes(self, mymsg):
 
         print "Type info = " + (str)(type(mymsg))
 
