@@ -99,7 +99,7 @@ class HLBackend:
             print "Total Elements = " + (str)(len(mymsg))
 
         elif (type(mymsg) == str):
-            printBytes(bytearray(mymsg))
+            self.printBytes(bytearray(mymsg))
 
         elif type(mymsg) == int:
             print "0x" + '{:x}'.format(mymsg),
@@ -511,7 +511,7 @@ class HLBackend:
             logging.error("Error - All Blocks not Flashed")
             logging.error("Total = {}".format(self.totalBlocks))
             logging.error("# of Blocks Flashed = {}"
-                          .format(blockCount))
+                          .format(self.blockCount))
         else:
             print "Flashing Successful!"
             endTxPacked = bytearray(2)
