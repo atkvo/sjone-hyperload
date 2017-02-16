@@ -274,17 +274,20 @@ class HLBackend:
 
     # params binArray, blockContent, blockSize, blockCount, totalBlocks
     def flash(self,sPort, binArray, blockContent,
-              blockSize, totalBlocks, sendDummy=False):
+              blockSize, totalBlocks, sendDummy=False,callback = lambda *_, **__: None):
         blockCount = 0
         while blockCount < totalBlocks:
+            print "totalBlocks: " + str(totalBlocks)
+            print "blockCount: " + str(blockCount)
+            callback(int( blockCount / totalBlocks  * 100))
             print "--------------------"
             blockCountPacked = struct.pack('<H', blockCount)
 
-            msg = sPort.write(blockCountPacked[1])
+            msg = self.sPort.write(blockCountPacked[1])
             if msg != 1:
                 logging.error("Error in Sending BlockCountLowAddr")
 
-            msg = sPort.write(blockCountPacked[0])
+            msg = self.sPort.write(blockCountPacked[0])
             if msg != 1:
                 logging.error("Error in Sending BlockCountHiAddr")
 
@@ -293,7 +296,7 @@ class HLBackend:
             if sendDummy is False:
                 blockContent = self.getPageContent(binArray, blockCount, blockSize)
 
-            msg = sPort.write(blockContent)
+            msg = self.sPort.write(blockContent)
             if msg != len(blockContent):
                 logging.error("Error - Failed to sending Data Block Content")
                 break
@@ -306,13 +309,13 @@ class HLBackend:
 
             logging.debug("Checksum = %d[0x%x]", checksum[0], checksum[0])
 
-            msg = sPort.write(checksum)
+            msg = self.sPort.write(checksum)
             logging.debug("Size of Block Written = %d", msg)
 
             if msg != 1:
                 logging.error("Error - Failed to send Entire Data Block")
 
-            msg = sPort.read(1)
+            msg = self.sPort.read(1)
             if msg != self.SpecialChar['OK']:
                 logging.error(
                     "Failed to Receive Ack.. Retrying #{}".format(blockCount))
@@ -321,6 +324,9 @@ class HLBackend:
                 blockCount = blockCount + 1
 
             print "--------------------"
+
+        callback(int( blockCount / totalBlocks  * 100))
+
         return blockCount
 
 
@@ -509,7 +515,7 @@ class HLBackend:
 
 
 
-    def flashPhase(self):
+    def flashPhase(self,callback = lambda *_, **__: None):
 
         # Send Dummy Blocks -
         # Update : We can send the actual blocks itself.
@@ -523,7 +529,8 @@ class HLBackend:
                            self.blockContent,
                            self.blockSize,
                            self.totalBlocks,
-                           sendDummy)
+                           sendDummy,
+                           callback)
         if self.blockCount != self.totalBlocks:
             logging.error("Error - All Blocks not Flashed")
             logging.error("Total = {}".format(self.totalBlocks))
@@ -535,7 +542,7 @@ class HLBackend:
             endTxPacked[0] = 0xFF
             endTxPacked[1] = 0xFF
 
-            msg = sPort.write(bytearray(endTxPacked))
+            msg = self.sPort.write(bytearray(endTxPacked))
 
             if msg != 2:
                 logging.error("Error Sending \

@@ -111,8 +111,11 @@ class MainWindow(Frame):
         print("it works")
 
     def flash(self):
-        self.BackEnd.flashPhase()
-        print "flashing..."
+        self.BackEnd.flashPhase(self.updateProgress)
+
+    def updateProgress(self,progressValue):
+        self.progvar.set(progressValue)
+        self.update()
 
 
     def findSubString(self,sourceList,substring):
