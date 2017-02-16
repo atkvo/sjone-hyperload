@@ -84,6 +84,11 @@ Program your board with `make flash`
 2. Bytes are types that are not mutable. Any changes done on them will cause a new alloc + concat and reassigning.
 
 ## CHANGELOG
+### v2.0 - 2017-02-15
+> Only has been tested on macOS Sierra
+
+* Added GUI interface (thanks @mrgrantham)
+
 ### v1.1 - 2017-02-11
 > Only has been tested on macOS Sierra
 
