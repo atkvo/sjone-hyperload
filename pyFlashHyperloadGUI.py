@@ -55,12 +55,13 @@ class MainWindow(Frame):
             self.selected_device.set(self.devices[self.validDevice])
 
         self.selected_baudRate = StringVar(self)  # stores baud rate selection
-        Label(self, text="Select Baud Rate").grid(row=5, sticky=W + N + S, padx=(10, 10), pady=(10, 5))
+        Label(self, text="Flash Baud Rate").grid(row=5, sticky=W + N + S, padx=(10, 10), pady=(10, 5))
         self.baudRate = OptionMenu(self, self.selected_baudRate, "", *self.BackEnd.BaudList)
         self.baudRate.grid(sticky=E + W + N + S, row=6, columnspan=3, padx=(8, 10))
 
-        # set default to 38400
-        self.selected_baudRate.set(self.BackEnd.BaudList[3])
+        # set default to the fastest speed
+        maxFlashSpeedIndex = len(self.BackEnd.BaudList) - 1
+        self.selected_baudRate.set(self.BackEnd.BaudList[maxFlashSpeedIndex])
 
         # Device Labels
         Label(self, text="Device Information", justify=CENTER, width=15).grid(row=4, sticky=E + W + N + S, column=3, columnspan=2, padx=(10, 10))
@@ -84,7 +85,7 @@ class MainWindow(Frame):
             self.BackEnd.setPort(self.selected_device.get())
 
         if(self.selected_baudRate.get() != ""):
-            self.BackEnd.setBaudRate(self.selected_baudRate.get())
+            self.BackEnd.setFlashBaudRate(self.selected_baudRate.get())
 
         if(self.hex_filepath.get() != ""):
             self.BackEnd.setFilePath(self.hex_filepath.get())

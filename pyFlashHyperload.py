@@ -67,9 +67,12 @@ class HLBackend:
         self.ApplicationVersion = "1.1"
         self.ToolName = "pyFLASH - HYPERLOAD"
         self.ToolInfo = "Flashing Tool for SJOne"
-        self.BaudList = [4800, 9600, 19200, 38400]
+        self.BaudList = [4800, 9600, 19200, 38400, 57600, 115200, 460000, 960000]
         self.ControlWordList = b'\x80\xf8\xfe\xff'
-        self.SpecialChar = {'Dollar': '$', 'OK': '!', 'NextLine': '\n', 'STAR': '*'}
+        self.SpecialChar = {'Dollar': '$',
+                            'OK': '!',
+                            'NextLine': '\n',
+                            'STAR': '*'}
         self.sCPUSpeed = 48000000
         self.sInitialDeviceBaud = 38400
 
@@ -446,7 +449,7 @@ class HLBackend:
         self.sPort.baudrate = self.sInitialDeviceBaud
         self.sPort.close()
 
-    def setBaudRate(self, baudrate):
+    def setFlashBaudRate(self, baudrate):
         self.sDeviceBaud = int(baudrate)
 
     def setPort(self, portString):
