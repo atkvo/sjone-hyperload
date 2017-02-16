@@ -15,23 +15,50 @@ The original source is here: https://gitlab.com/akshay-vijaykumar/pyFlash-Hyperl
     - `pip install intelhex`
 
 ## Steps to Run:
-### Method 1 - Editing the source
-	- Modify pyFlash-Hyperload.py with the required Filepaths and Baudrate.
-	- Run "sudo python pyFlash-Hyperload.py"
+### Method 1 - GUI version
+Run the script with the `-g` flag to enable the GUI mode
+
+```
+./pyFlashHyperload.py -g
+```
 
 ### Method 2 - Commandline arguments
-This method can be useful for incorporating into a Makefile or Eclipse rule to automatically program the board
+This method can be useful for incorporating into a Makefile or Eclipse rule to automatically program the board. 
 
 * Usage: 
-    - short-hand: `python pyFlash-Hyperload.py -p port -f file [-b baud]`
-    - long-hand: `python pyFlash-Hyperload.py --port=port --file=file [--baud=baud]`
+    - short-hand: `python pyFlashHyperload.py -p port -f file [-b baud]`
+    - long-hand: `python pyFlashHyperload.py --port=port --file=file [--baud=baud]`
 
 
 Example:
 ```
-./pyFlash-Hyperload.py -p /dev/tty.usbserial-A503JOHW -f /path/to/your/file.hex
+./pyFlashHyperload.py -p /dev/tty.usbserial-A503JOHW -f /path/to/your/file.hex
 ```
 
+#### Tip
+If you're running a commandline build with Makefiles, it's recommended to symlink the main script to your working directory and create a rule in the make file.  
+
+symlink python script to working directory
+> this step is optional and is more for convenience. allows you to write your Makefile rules using relative paths instead of absolute paths.
+
+```bash
+cd $(WORKING_DIRECTORY)
+ln -s /path/to/hyperload/pyFlashHyperload.py pyFlashHyperload.py
+```
+
+Add a rule to your Makefile:
+
+```make
+flash:
+    ./pyFlashHyperload.py -p /dev/tty.usbserial-A503JOHW -f $(WORKING_DIRECTORY)/build/program.hex
+```
+
+Program your board with `make flash`
+
+
+### Method 3 - Editing the source (not recommended)
+    - Modify pyFlashHyperload.py with the required Filepaths and Baudrate.
+    - Run "sudo python pyFlashHyperload.py"
 
 ## Development
 
