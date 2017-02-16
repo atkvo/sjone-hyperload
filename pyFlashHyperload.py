@@ -457,14 +457,21 @@ class HLBackend:
         self.sPort.reset_output_buffer()
         self.sPort.flush()
 
-    def CLmode(self):
+    def closeSerial(self):
+        self.sPort.baudrate = self.sInitialDeviceBaud
+        self.sPort.close()
 
-        print str('-' * (len(self.sHexFilePath) + 20))
-        print "Hex File Path = \"" + self.sHexFilePath + "\""
-        print str('-' * (len(self.sHexFilePath) + 20))
+    def setBaudRate(self,baudrate):
+        self.sDeviceBaud = int(baudrate)
 
-        configureSerial()
+    def setPort(self,portString):
+        self.sDeviceFile = portString
 
+    def setFilePath(self,filepath):
+        self.sHexFilePath = filepath
+
+
+    def preFlashPhases(self):
         # ---- Hyperload Phase 1 ----
         status, errMsg = self.hyperloadPhase1(self.sPort, self.sDeviceBaud)
 
@@ -476,7 +483,7 @@ class HLBackend:
         # ---- Phase 1 complete ----
 
         # ---- Hyperload Phase 2 ----
-        status, CPUDescString, errMsg = self.hyperloadPhase2(self.sPort)
+        status, self.CPUDescString, errMsg = self.hyperloadPhase2(self.sPort)
 
         if status is False:
             # phase 2 failure. abort.
@@ -485,38 +492,41 @@ class HLBackend:
             pass
         # ---- Phase 2 complete ----
 
-        logging.debug("CPU Description String = %s", CPUDescString)
+        logging.debug("CPU Description String = %s", self.CPUDescString)
 
         # Prepare for phase 3
-        boardParameters = self.getBoardParameters(CPUDescString)
+        self.boardParameters = self.getBoardParameters(self.CPUDescString)
+        # prepare binary from hex file
+        self.binArray = self.getBinaryFromIHex(self.sHexFilePath, self.sGenerateBinary)
+        self.blockSize = int(self.boardParameters['BlockSize'])
+        self.totalBlocks = (len(self.binArray) * 1.0) / self.blockSize
+        self.totalBlocks = math.ceil(self.totalBlocks)
+        self.binArray = self.padBinaryArray(self.binArray, self.blockSize)
+        self.blockContent = bytearray(self.blockSize)
 
-        binArray = self.getBinaryFromIHex(self.sHexFilePath, self.sGenerateBinary)
-        blockSize = int(boardParameters['BlockSize'])
-        totalBlocks = (len(binArray) * 1.0) / blockSize
-        totalBlocks = math.ceil(totalBlocks)
-        binArray = self.padBinaryArray(binArray, blockSize)
-        blockContent = bytearray(blockSize)
+        logging.debug("Total Blocks = %f", self.totalBlocks)
+        print "Total # of Blocks to be Flashed = ", self.totalBlocks
 
-        logging.debug("Total Blocks = %f", totalBlocks)
-        print "Total # of Blocks to be Flashed = ", totalBlocks
+
+
+    def flashPhase(self):
 
         # Send Dummy Blocks -
         # Update : We can send the actual blocks itself.
         sendDummy = False
         if sendDummy is True:
             logging.debug("FLASHING EMPTY BLOCKS")
-
         # ---- Hyperload Phase 3 ----
         # Sending Blocks of Binary File
-        blockCount = self.flash(sPort,
-                           binArray,
-                           blockContent,
-                           blockSize,
-                           totalBlocks,
+        self.blockCount = self.flash(self.sPort,
+                           self.binArray,
+                           self.blockContent,
+                           self.blockSize,
+                           self.totalBlocks,
                            sendDummy)
-        if blockCount != totalBlocks:
+        if self.blockCount != self.totalBlocks:
             logging.error("Error - All Blocks not Flashed")
-            logging.error("Total = {}".format(totalBlocks))
+            logging.error("Total = {}".format(self.totalBlocks))
             logging.error("# of Blocks Flashed = {}"
                           .format(blockCount))
         else:
@@ -531,15 +541,23 @@ class HLBackend:
                 logging.error("Error Sending \
                     End Of Transaction Signal")
 
-            msg = sPort.read(1)
+            msg = self.sPort.read(1)
             logging.debug("Received Ack = " + str(msg))
 
             if msg != self.SpecialChar['STAR']:
                 logging.error("Error - Final Ack Not Received")
         # ---- Phase 3 Complete ----
 
-        sPort.baudrate = self.sInitialDeviceBaud
-        sPort.close()
+    def CLmode(self):
+
+        print str('-' * (len(self.sHexFilePath) + 20))
+        print "Hex File Path = \"" + self.sHexFilePath + "\""
+        print str('-' * (len(self.sHexFilePath) + 20))
+
+        self.configureSerial()
+        self.preFlashPhases()
+        self.flashPhase()
+        self.closeSerial()
 
 def main():
 

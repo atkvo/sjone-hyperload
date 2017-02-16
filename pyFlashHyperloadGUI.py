@@ -20,17 +20,17 @@ class MainWindow(Frame):
         self.grid(sticky=N+S+E+W,padx=(15,15),pady=(15,15))
         # Code to add widgets will go here...
         Label(self,text="FLASH Programming File (*.HEX)").grid(row=0,sticky=W+N+S, columnspan=2,padx=(10,10));
-        hex_filepath = ""
-        self.tbox_hex_filepath = Entry(self,textvariable=hex_filepath);
+        self.hex_filepath = StringVar()
+        self.tbox_hex_filepath = Entry(self,textvariable=self.hex_filepath);
         self.tbox_hex_filepath.grid(row=1,column=0,sticky=E+W+N+S,padx=(10,10),pady=(10,10),columnspan=3);
 
-        Button(self, text='Open', command=self.get_hexfile).grid(row=1,column=3,padx=(10,10),pady=(10,10),sticky=E+W+N+S)
+        Button(self, text='Open', command=self.b_open).grid(row=1,column=3,padx=(10,10),pady=(10,10),sticky=E+W+N+S)
         Button(self, text='Clear', command=self.progmove).grid(row=1,column=4,padx=(10,10),pady=(10,10),sticky=E+W+N+S)
         Button(self, text='Flash', command=self.flash).grid(row=2,column=3,columnspan=2,padx=(10,10),pady=(10,10),sticky=E+W+N+S)
 
         pbar_style = ttk.Style()
         pbar_style.theme_use('default')
-        pbar_style.configure("gray.Horizontal.TProgressbar", foreground='white', background='white')
+        pbar_style.configure("gray.Horizontal.TProgressbar", foreground='blue', background='white')
 
         self.progvar = IntVar(self)
         self.progbar = ttk.Progressbar(self, orient=HORIZONTAL, length=500,style="gray.Horizontal.TProgressbar", variable=self.progvar, mode='determinate')
@@ -79,18 +79,41 @@ class MainWindow(Frame):
         self.l_flash = Label(self,text="<-->",justify=LEFT,anchor=W)
         self.l_flash.grid(row=8,column=4, sticky=W+N+S, columnspan=1,padx=(10,10));
 
+    def commit_parameters(self):
+        if(self.selected_device.get() != ""):
+            self.BackEnd.setPort(self.selected_device.get())
 
+        if(self.selected_baudRate.get() != ""):
+            self.BackEnd.setBaudRate(self.selected_baudRate.get())
 
-    def get_hexfile(self):
-        self.tbox_hex_filepath.insert(0,tkFileDialog.askopenfilename())
+        if(self.hex_filepath.get() != ""):
+            self.BackEnd.setFilePath(self.hex_filepath.get())
+
+    def set_deviceInfo(self):
+        self.l_board.config(text=self.BackEnd.boardParameters['Board'])
+        self.l_block.config(text=self.BackEnd.boardParameters['BlockSize'])
+        self.l_bootloader.config(text=self.BackEnd.boardParameters['BootloaderSize'])
+        self.l_flash.config(text=self.BackEnd.boardParameters['FlashSize'])
+        #{'BootloaderSize': 65536, 'BlockSize': '4096', 'FlashSize': '512', 'Board': '$LPC1758'}
+
+    def b_open(self):
+        self.hex_filepath.set(tkFileDialog.askopenfilename())
+        print self.hex_filepath.get()
+        self.commit_parameters()
+        self.BackEnd.configureSerial()
+        self.BackEnd.preFlashPhases()
+        print self.BackEnd.boardParameters
+        self.set_deviceInfo()
+
 
     def progmove(self):
         self.progvar.set(self.progvar.get() + 1)
         print("it works")
 
     def flash(self):
-        #run flashing command
-        print "something"
+        self.BackEnd.flashPhase()
+        print "flashing..."
+
 
     def findSubString(self,sourceList,substring):
         print "substring: " + substring
