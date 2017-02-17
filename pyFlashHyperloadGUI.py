@@ -118,6 +118,7 @@ class MainWindow(Frame):
             self.BackEnd.preFlashPhases()
             self.set_deviceInfo()
             self.BackEnd.flashPhase(self.updateProgress)
+            self.BackEnd.closeSerial()
         else:
             print "Unable to Commit: Not Enough Parameters Selected"
 
