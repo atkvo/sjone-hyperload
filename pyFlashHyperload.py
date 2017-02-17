@@ -558,7 +558,7 @@ def main():
             HL.sDeviceFile = p
             HL.sHexFilePath = f
             if b > 0:
-                HL.sDeviceBaud = b  # set to user specified baud
+                HL.flashBaudRate = b  # set to user specified baud
             else:
                 pass  # fall back to hard-coded baud rate
 
