@@ -89,6 +89,7 @@ Program your board with `make flash`
 ### v2.1 - 2017-02-16
 * Fixed repeated flash with GUI mode (close serial port after flashing)
 * Removed leftover buttons on GUI from testing
+* Fixed `-b baud` command line flag switch
 
 ### v2.0 - 2017-02-15
 > Only has been tested on macOS Sierra
