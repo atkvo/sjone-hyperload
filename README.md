@@ -1,5 +1,5 @@
 # pyFlash-Hyperload
-Version : 2.0
+Version : 2.1
 
 ## About the Tool:
 A firmware flashing tool for SJOne using Python. This is based on the 'Hyperload' Protocol for flashing images at high speeds.
@@ -29,6 +29,8 @@ This method can be useful for incorporating into a Makefile or Eclipse rule to a
     - short-hand: `python pyFlashHyperload.py -p port -f file [-b baud]`
     - long-hand: `python pyFlashHyperload.py --port=port --file=file [--baud=baud]`
 
+
+**Note:** the optional switch, `-b baud`, represents the baud rate that will be used to **flash the board** It's recommended to choose a higher value. The default is set to `1000000 baud`. Initial communication with the board will always be done at 38.4K baud.
 
 Example:
 ```
@@ -84,6 +86,10 @@ Program your board with `make flash`
 2. Bytes are types that are not mutable. Any changes done on them will cause a new alloc + concat and reassigning.
 
 ## CHANGELOG
+### v2.1 - 2017-02-16
+* Fixed repeated flash with GUI mode (close serial port after flashing)
+* Removed leftover buttons on GUI from testing
+
 ### v2.0 - 2017-02-15
 > Only has been tested on macOS Sierra
 
