@@ -64,7 +64,7 @@ class HLBackend:
         self.sGenerateBinary = "y"  # "y" - Yes | "n" - No
         ###############################################################################
 
-        self.ApplicationVersion = "1.1"
+        self.ApplicationVersion = "2.1"
         self.ToolName = "pyFLASH - HYPERLOAD"
         self.ToolInfo = "Flashing Tool for SJOne"
         self.BaudList = [4800, 9600, 19200, 38400, 57600, 115200, 460000, 960000]
